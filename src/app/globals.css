@@ -1,24 +1,24 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f8f5ef;
+  --background: #f7f3eb;
   --foreground: #17332e;
   --card: #ffffff;
   --card-foreground: #17332e;
-  --primary: #2f6b4f;
+  --primary: #0f5a45;
   --primary-foreground: #ffffff;
-  --secondary: #ece8df;
+  --secondary: #e9e4d8;
   --secondary-foreground: #17332e;
-  --muted: #efeee9;
-  --muted-foreground: #60716b;
-  --accent: #e6ad42;
+  --muted: #efede6;
+  --muted-foreground: #61736c;
+  --accent: #d99a32;
   --accent-foreground: #17332e;
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
-  --border: #dedbd3;
-  --input: #dedbd3;
-  --ring: #2f6b4f;
-  --radius: 1rem;
+  --border: #ddd8cc;
+  --input: #ddd8cc;
+  --ring: #0f5a45;
+  --radius: 1.1rem;
 }
 
 @theme inline {
@@ -48,5 +48,22 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
 a { color: inherit; text-decoration: none; }
 button, input, select { font: inherit; }
 
-.hero-grid { background-image: linear-gradient(to bottom, rgba(23,51,46,.02), rgba(23,51,46,.08)), radial-gradient(circle at 20% 20%, rgba(230,173,66,.18), transparent 35%), radial-gradient(circle at 80% 10%, rgba(47,107,79,.16), transparent 35%); }
+.display-serif { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -0.03em; }
 .text-balance { text-wrap: balance; }
+
+.hero-glow {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(217,154,50,.16), transparent 34%),
+    radial-gradient(circle at 78% 16%, rgba(15,90,69,.18), transparent 38%);
+}
+
+.hero-image-overlay {
+  background: linear-gradient(180deg, rgba(12,31,28,.18) 0%, rgba(12,31,28,.08) 42%, rgba(12,31,28,.72) 100%);
+}
+
+.section-rule { border-color: rgba(23,51,46,.1); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hover-lift { transition: transform .25s ease, box-shadow .25s ease; }
+  .hover-lift:hover { transform: translateY(-3px); }
+}
