@@ -5,7 +5,8 @@ import { AvailabilityService } from './availability.service'
 
 /**
  * Check whether a room is available for a date range.
- * Called from the client booking form before confirming a booking.
+ * Called from the booking form as a fast pre-check; the transactional RPC
+ * remains the authoritative availability gate when the booking is created.
  */
 export async function checkRoomAvailability(roomId: string, checkIn: string, checkOut: string) {
   if (!roomId || !checkIn || !checkOut) {
@@ -20,10 +21,10 @@ export async function checkRoomAvailability(roomId: string, checkIn: string, che
   } catch (err) {
     console.error('[checkRoomAvailability]', err)
     return {
-      available: true,
+      available: false,
       unavailableDate: null,
       nights: 0,
-      error: err instanceof Error ? err.message : 'Could not check availability.',
+      error: err instanceof Error ? err.message : 'Could not verify availability. Please try again.',
     }
   }
 }
