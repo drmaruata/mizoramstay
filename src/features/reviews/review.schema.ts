@@ -1,0 +1,2 @@
+import { z } from 'zod'
+export const reviewSchema = z.object({ bookingId: z.string().uuid(), rating: z.number().int().min(1).max(5), cleanlinessRating: z.number().int().min(1).max(5).optional(), locationRating: z.number().int().min(1).max(5).optional(), hospitalityRating: z.number().int().min(1).max(5).optional(), facilitiesRating: z.number().int().min(1).max(5).optional(), valueRating: z.number().int().min(1).max(5).optional(), comment: z.string().max(5000).optional() })

@@ -1,0 +1,10 @@
+project_id = "mizoramstay"
+
+[functions.create-booking]
+verify_jwt = true
+[functions.payment-webhook]
+verify_jwt = false
+[functions.cancel-booking]
+verify_jwt = true
+[functions.send-notification]
+verify_jwt = true

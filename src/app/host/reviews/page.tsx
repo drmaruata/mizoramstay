@@ -1,0 +1,5 @@
+import { MessageSquare, Star } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PortalShell } from '@/components/host/portal-shell'
+export default function HostReviewsPage(){return <PortalShell><div><p className="text-sm text-muted-foreground">Guest feedback</p><h1 className="mt-1 text-3xl font-black">Reviews</h1></div><div className="mt-6 space-y-4">{[['Ananya Sharma','4.9','Wonderful host and clean rooms.','October 2026'],['Rahul Verma','4.7','Great location and helpful local advice.','September 2026']].map((r)=><Card key={r[0]}><CardHeader><CardTitle className="flex items-center justify-between text-base"><span>{r[0]}</span><span className="flex items-center gap-1 text-sm"><Star className="size-4 fill-current text-accent"/>{r[1]}</span></CardTitle><p className="text-xs text-muted-foreground">{r[3]}</p></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">{r[2]}</p><Button variant="outline" size="sm" className="mt-4"><MessageSquare className="size-4"/>Respond</Button></CardContent></Card>)}</div></PortalShell>}

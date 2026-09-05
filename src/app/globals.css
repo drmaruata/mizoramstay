@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #f8f5ef;
+  --foreground: #17332e;
+  --card: #ffffff;
+  --card-foreground: #17332e;
+  --primary: #2f6b4f;
+  --primary-foreground: #ffffff;
+  --secondary: #ece8df;
+  --secondary-foreground: #17332e;
+  --muted: #efeee9;
+  --muted-foreground: #60716b;
+  --accent: #e6ad42;
+  --accent-foreground: #17332e;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --border: #dedbd3;
+  --input: #dedbd3;
+  --ring: #2f6b4f;
+  --radius: 1rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-2xl: var(--radius);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
+
+.hero-grid { background-image: linear-gradient(to bottom, rgba(23,51,46,.02), rgba(23,51,46,.08)), radial-gradient(circle at 20% 20%, rgba(230,173,66,.18), transparent 35%), radial-gradient(circle at 80% 10%, rgba(47,107,79,.16), transparent 35%); }
+.text-balance { text-wrap: balance; }
