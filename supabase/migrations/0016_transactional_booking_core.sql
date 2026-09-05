@@ -3,6 +3,7 @@
 -- idempotency, and safe release of expired/cancelled holds.
 
 alter table public.bookings
+  add column if not exists notes text,
   add column if not exists idempotency_key text,
   add column if not exists hold_expires_at timestamptz,
   add column if not exists inventory_reserved boolean not null default false,
@@ -21,6 +22,7 @@ create or replace function public.create_booking_transaction(
   p_room_id uuid,
   p_check_in date,
   p_check_out date,
+  p_guests smallint,
   p_quantity smallint,
   p_guest_name text,
   p_guest_phone text,
@@ -51,15 +53,15 @@ begin
   if v_user_id is null then
     raise exception using errcode = '42501', message = 'Authentication required.';
   end if;
-
-  if p_quantity is null or p_quantity < 1 then
-    raise exception using errcode = '22023', message = 'Quantity must be at least 1.';
+  if p_guests is null or p_guests < 1 or p_guests > 20 then
+    raise exception using errcode = '22023', message = 'Guest count must be between 1 and 20.';
   end if;
-
+  if p_quantity is null or p_quantity < 1 then
+    raise exception using errcode = '22023', message = 'Room quantity must be at least 1.';
+  end if;
   if p_check_out <= p_check_in then
     raise exception using errcode = '22023', message = 'Check-out date must be after check-in date.';
   end if;
-
   if p_hold_minutes < 1 or p_hold_minutes > 60 then
     raise exception using errcode = '22023', message = 'Hold duration must be between 1 and 60 minutes.';
   end if;
@@ -76,7 +78,7 @@ begin
     end if;
   end if;
 
-  select * into v_room
+  select rooms.* into v_room
     from public.rooms
     join public.properties on properties.id = rooms.property_id
    where rooms.id = p_room_id
@@ -88,9 +90,8 @@ begin
   if not found then
     raise exception using errcode = 'P0002', message = 'Room or property is not available.';
   end if;
-
-  if p_quantity > 1 and p_quantity > v_room.max_guests then
-    raise exception using errcode = '22023', message = 'Requested quantity exceeds room capacity.';
+  if p_guests > v_room.max_guests * p_quantity then
+    raise exception using errcode = '22023', message = 'Guest count exceeds room capacity.';
   end if;
 
   v_nights := p_check_out - p_check_in;
@@ -99,31 +100,29 @@ begin
   v_total := v_subtotal + v_platform_fee;
   v_hold_expires := now() + make_interval(mins => p_hold_minutes);
 
-  -- Lock every inventory row before checking and decrementing it. Missing rows
-  -- are rejected so inventory cannot silently fail open.
+  -- Lock every inventory row before checking/decrementing it. Missing rows
+  -- fail closed; inventory must be initialized before a room can be booked.
   for v_date in select generate_series(p_check_in, p_check_out - 1, interval '1 day')::date loop
     select available_units into v_available
       from public.room_inventory
      where room_id = p_room_id and date = v_date
      for update;
-
     if not found then
       raise exception using errcode = 'P0003', message = format('Inventory is not initialized for %s.', v_date);
     end if;
-
     if v_available < p_quantity then
       raise exception using errcode = 'P0004', message = format('Insufficient availability on %s.', v_date);
     end if;
   end loop;
 
-  v_reference := 'MZ-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
+  v_reference := 'MZ-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(uuid_generate_v4()::text, '-', ''), 1, 8));
 
   insert into public.bookings (
     booking_reference, user_id, property_id, check_in, check_out, guests,
     subtotal, platform_fee, total_amount, status, notes, idempotency_key,
     hold_expires_at, inventory_reserved, updated_at
   ) values (
-    v_reference, v_user_id, p_property_id, p_check_in, p_check_out, p_quantity,
+    v_reference, v_user_id, p_property_id, p_check_in, p_check_out, p_guests,
     v_subtotal, v_platform_fee, v_total, 'PENDING', p_notes, p_idempotency_key,
     v_hold_expires, true, now()
   ) returning id into v_booking_id;
@@ -154,8 +153,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_booking_transaction(uuid, uuid, date, date, smallint, text, text, text, text, text, integer) from public;
-grant execute on function public.create_booking_transaction(uuid, uuid, date, date, smallint, text, text, text, text, text, integer) to authenticated;
+revoke all on function public.create_booking_transaction(uuid, uuid, date, date, smallint, smallint, text, text, text, text, text, integer) from public;
+grant execute on function public.create_booking_transaction(uuid, uuid, date, date, smallint, smallint, text, text, text, text, text, integer) to authenticated;
 
 create or replace function public.release_expired_booking_holds()
 returns integer
@@ -185,13 +184,11 @@ begin
          where room_id = v_item.room_id and date = v_date;
       end loop;
     end loop;
-
     update public.bookings
        set status = 'CANCELLED', inventory_reserved = false,
            notes = coalesce(notes || E'\n', '') || 'Payment hold expired.',
            updated_at = now()
      where id = v_booking.id;
-
     v_count := v_count + 1;
   end loop;
   return v_count;
