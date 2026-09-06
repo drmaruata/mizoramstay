@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, CheckCircle2, CreditCard, Loader2, Users } from 'lucide-react'
@@ -10,6 +11,8 @@ import type { Property, Room } from '@/types/domain'
 import { formatINR } from '@/lib/utils'
 import { checkRoomAvailability } from '@/features/bookings/availability.actions'
 import { PaymentCheckout } from '@/components/public/PaymentCheckout'
+
+const FALLBACK_ROOM_IMAGE = 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80'
 
 export function BookingForm({ property, room }: { property: Property; room: Room | null }) {
   const router = useRouter()
@@ -27,10 +30,16 @@ export function BookingForm({ property, room }: { property: Property; room: Room
   const [booking, setBooking] = useState<{ id: string; bookingNumber: string; totalAmount: number; holdExpiresAt: string } | null>(null)
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null)
 
-  const nights = useMemo(() => dates.checkIn && dates.checkOut ? Math.max(1, Math.round((new Date(dates.checkOut).getTime() - new Date(dates.checkIn).getTime()) / 86400000)) : 1, [dates])
+  const nights = useMemo(
+    () => dates.checkIn && dates.checkOut
+      ? Math.max(1, Math.round((new Date(dates.checkOut).getTime() - new Date(dates.checkIn).getTime()) / 86400000))
+      : 1,
+    [dates]
+  )
   const subtotal = selectedRoom.price * nights
   const fee = Math.round(subtotal * 0.1)
   const total = subtotal + fee
+  const roomImage = selectedRoom.images[0]?.url ?? FALLBACK_ROOM_IMAGE
 
   async function next() {
     setAvailabilityError(null)
@@ -92,9 +101,9 @@ export function BookingForm({ property, room }: { property: Property; room: Room
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
       <div className="mb-8 flex items-center justify-center gap-3 text-sm">
-        {['Stay details', 'Guest details', 'Payment'].map((label, i) => (
-          <div key={label} className={`flex items-center gap-2 ${step === i + 1 ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
-            <span className="grid size-7 place-items-center rounded-full border">{i + 1}</span>{label}{i < 2 && <span className="hidden w-8 border-t sm:block" />}
+        {['Stay details', 'Guest details', 'Payment'].map((label, index) => (
+          <div key={label} className={`flex items-center gap-2 ${step === index + 1 ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
+            <span className="grid size-7 place-items-center rounded-full border">{index + 1}</span>{label}{index < 2 && <span className="hidden w-8 border-t sm:block" />}
           </div>
         ))}
       </div>
@@ -106,6 +115,22 @@ export function BookingForm({ property, room }: { property: Property; room: Room
             {(availabilityError || bookingError) && <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{availabilityError ?? bookingError}</div>}
 
             {step === 1 && <>
+              <div className="rounded-2xl border bg-card p-3 sm:p-4">
+                <div className="relative aspect-[16/8] overflow-hidden rounded-xl bg-muted">
+                  <Image src={roomImage} alt={selectedRoom.name} fill unoptimized sizes="(max-width:768px) 100vw, 620px" className="object-cover" />
+                  <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-3">
+                    <div className="rounded-xl bg-black/65 px-3 py-2 text-white backdrop-blur-sm">
+                      <p className="text-sm font-bold">{selectedRoom.name}</p>
+                      <p className="text-xs text-white/80">{selectedRoom.images.length || 0} room photos · {selectedRoom.beds || 'Room bedding'}</p>
+                    </div>
+                    <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-foreground">
+                      Selected room
+                    </span>
+                  </div>
+                </div>
+                {selectedRoom.description && <p className="mt-3 text-sm leading-6 text-muted-foreground">{selectedRoom.description}</p>}
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-semibold">Check-in<Input type="date" value={dates.checkIn} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setDates({ ...dates, checkIn: e.target.value })} className="mt-2" /></label>
                 <label className="text-sm font-semibold">Check-out<Input type="date" value={dates.checkOut} min={dates.checkIn || new Date().toISOString().slice(0, 10)} onChange={(e) => setDates({ ...dates, checkOut: e.target.value })} className="mt-2" /></label>
@@ -116,6 +141,7 @@ export function BookingForm({ property, room }: { property: Property; room: Room
             </>}
 
             {step === 2 && <div className="grid gap-4">
+              <div className="flex items-center gap-3 rounded-2xl border bg-muted/40 p-3"><div className="relative size-16 overflow-hidden rounded-xl bg-muted"><Image src={roomImage} alt={selectedRoom.name} fill unoptimized sizes="64px" className="object-cover" /></div><div><p className="font-bold">{selectedRoom.name}</p><p className="text-xs text-muted-foreground">{property.name} · {formatINR(selectedRoom.price)} / night</p></div></div>
               <label className="text-sm font-semibold">Full name<Input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Your name" className="mt-2" /></label>
               <label className="text-sm font-semibold">Mobile number<Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" inputMode="tel" className="mt-2" /></label>
               <label className="text-sm font-semibold">Email (optional)<Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" type="email" className="mt-2" /></label>
@@ -133,7 +159,13 @@ export function BookingForm({ property, room }: { property: Property; room: Room
         </Card>
 
         <Card className="h-fit">
-          <CardHeader><CardTitle>{property.name}</CardTitle><p className="text-sm text-muted-foreground">{selectedRoom.name}</p></CardHeader>
+          <CardHeader>
+            <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-muted">
+              <Image src={roomImage} alt={selectedRoom.name} fill unoptimized sizes="360px" className="object-cover" />
+            </div>
+            <CardTitle className="pt-1">{property.name}</CardTitle>
+            <p className="text-sm font-semibold text-primary">{selectedRoom.name}</p>
+          </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between"><span>Rate</span><span>{formatINR(selectedRoom.price)} × {nights}</span></div>
             <div className="flex justify-between"><span>Platform/service fees</span><span>{formatINR(fee)}</span></div>
