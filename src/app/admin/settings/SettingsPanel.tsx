@@ -6,6 +6,8 @@ import { updatePlatformSettings, type AdminSettingsState } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
+export type { AdminSettingsState } from './actions'
+
 const defaults: AdminSettingsState = {
   commissionRate: 10,
   flexibleFreeCancelHours: 48,
