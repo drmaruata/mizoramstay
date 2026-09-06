@@ -3,17 +3,17 @@
 import { revalidatePath } from 'next/cache'
 import { requireHost } from '@/lib/auth/session'
 import { createClient } from '@/lib/supabase/server'
-import { HostPayoutService } from '@/features/payouts/host-payout.service'
+import { HostPayoutService } from '@/features/payments/host-payout.service'
 
 export type PayoutSettingsState = { ok: boolean; message: string }
 
 export async function saveHostPayoutSettings(_previous: PayoutSettingsState, formData: FormData): Promise<PayoutSettingsState> {
   try {
-    const host = await requireHost()
+    await requireHost()
     const db = await createClient()
     const service = new HostPayoutService(db)
-    const hostId = await service.getCurrentHostId()
-    if (!hostId || hostId !== (await resolveHostId(db, host.id))) throw new Error('Host account could not be resolved.')
+    const hostId = await service.getHostProfileId()
+    if (!hostId) throw new Error('Host account could not be resolved.')
 
     await service.saveSettings(hostId, {
       beneficiaryName: String(formData.get('beneficiaryName') ?? ''),
@@ -30,9 +30,4 @@ export async function saveHostPayoutSettings(_previous: PayoutSettingsState, for
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Unable to save payout settings.' }
   }
-}
-
-async function resolveHostId(db: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data } = await db.from('host_profiles').select('id').eq('user_id', userId).maybeSingle()
-  return data?.id ?? null
 }
