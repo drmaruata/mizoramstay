@@ -21,7 +21,17 @@ export interface Property {
   hostName: string
   latitude: number
   longitude: number
+  media: PropertyMedia[]
   rooms: Room[]
+}
+
+export interface PropertyMedia {
+  id: string
+  url: string
+  altText: string
+  sortOrder: number
+  isHero: boolean
+  roomId: string | null
 }
 
 export interface Room {
@@ -31,4 +41,7 @@ export interface Room {
   beds: string
   bathroom: string
   price: number
+  description: string
+  roomType: string
+  images: PropertyMedia[]
 }
