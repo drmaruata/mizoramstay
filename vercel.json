@@ -3,6 +3,10 @@
     {
       "path": "/api/internal/booking-hold-cleanup",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/internal/payouts/process",
+      "schedule": "15 * * * *"
     }
   ]
 }
