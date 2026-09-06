@@ -8,89 +8,11 @@ import { createClient } from '@/lib/supabase/server'
 import { formatINR } from '@/lib/utils'
 import { signOut } from '@/app/(auth)/signout/actions'
 
-/** Row shape returned by the account bookings query (embedded property name). */
-interface AccountBookingRow {
-  id: string
-  booking_reference: string
-  check_in: string
-  check_out: string
-  guests: number
-  total_amount: number | null
-  status: string
-  created_at: string
-  properties?: { name: string } | null
-}
+interface AccountBookingRow { id:string; booking_reference:string; check_in:string; check_out:string; guests:number; total_amount:number|null; status:string; created_at:string; properties?:{name:string}|null }
 
-export default async function AccountPage() {
-  const user = await requireUser()
-  const dashboardHref = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? '/admin' : user.role === 'HOST' ? '/host/dashboard' : '/account'
-  const roleLabel = user.role === 'HOST' ? 'Host account' : user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'Admin account' : 'Traveller account'
-
-  const db = await createClient()
-  const { data: bookings } = (await db
-    .from('bookings')
-    .select(
-      'id, booking_reference, check_in, check_out, guests, total_amount, status, created_at, properties:property_id(name)'
-    )
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })) as unknown as {
-    data: AccountBookingRow[] | null
-  }
-
-  return (
-    <main className="min-h-screen bg-[#f7f3eb]">
-      <section className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
-        <div className="flex flex-col gap-6 border-b border-[#ddd8cc] pb-8 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[.25em] text-primary">Your account</p>
-            <h1 className="display-serif mt-2 text-4xl leading-tight text-[#17332e] md:text-5xl">Welcome back.</h1>
-            <p className="mt-3 text-sm text-muted-foreground">{user.email ?? 'Signed in user'} · {roleLabel}</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {dashboardHref !== '/account' && <Link href={dashboardHref}><Button variant="outline" className="rounded-xl border-[#cfc9bc] bg-white">Open dashboard <ArrowRight className="size-4" /></Button></Link>}
-            <form action={signOut}><Button type="submit" variant="outline" className="rounded-xl border-[#cfc9bc] bg-white text-[#17332e] hover:bg-[#f2eee5]"><LogOut className="size-4" /> Sign out</Button></form>
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
-          <Card className="border-[#ddd8cc] shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-[#17332e]"><Plane className="size-5 text-primary" /> Trips</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {bookings && bookings.length > 0 ? (
-                <div className="divide-y">
-                  {bookings.map((b) => (
-                    <Link key={b.id} href={`/booking/${b.id}`} className="block py-3 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-[#17332e]">{b.properties?.name ?? 'Stay'}</p>
-                          <p className="text-xs text-muted-foreground">{b.booking_reference}</p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {b.check_in} → {b.check_out} · {b.guests} guest{b.guests === 1 ? '' : 's'}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className="font-bold text-[#17332e]">{formatINR(Number(b.total_amount))}</p>
-                          <BookingStatusBadge status={b.status} />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm leading-6 text-muted-foreground">Your upcoming and completed stays will appear here.</p>
-                  <Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4" /></Button></Link>
-                </>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Heart className="size-5 text-primary" /> Wishlist</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Saved properties are linked to your authenticated user record.</p><Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4" /></Button></Link></CardContent></Card>
-          <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Star className="size-5 text-primary" /> Reviews</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Only completed bookings can create verified reviews.</p></CardContent></Card>
-          <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><ShieldCheck className="size-5 text-primary" /> Account & security</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Your session is managed securely through Supabase Auth.</p><Link href="/"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Back to homepage <ArrowRight className="size-4" /></Button></Link></CardContent></Card>
-        </div>
-      </section>
-    </main>
-  )
+export default async function AccountPage(){
+  const user=await requireUser(); const dashboardHref=user.role==='ADMIN'||user.role==='SUPER_ADMIN'?'/admin':user.role==='HOST'?'/host/dashboard':'/account'; const roleLabel=user.role==='HOST'?'Host account':user.role==='ADMIN'||user.role==='SUPER_ADMIN'?'Admin account':'Traveller account'; const db=await createClient()
+  const {data:bookings}=await db.from('bookings').select('id,booking_reference,check_in,check_out,guests,total_amount,status,created_at,properties:property_id(name)').eq('user_id',user.id).order('created_at',{ascending:false}) as unknown as {data:AccountBookingRow[]|null}
+  const {count:wishlistCount}=await db.from('wishlists').select('id',{count:'exact',head:true}).eq('user_id',user.id); const {count:reviewCount}=await db.from('reviews').select('id',{count:'exact',head:true}).eq('user_id',user.id)
+  return <main className="min-h-screen bg-[#f7f3eb]"><section className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14"><div className="flex flex-col gap-6 border-b border-[#ddd8cc] pb-8 md:flex-row md:items-end md:justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[.25em] text-primary">Your account</p><h1 className="mt-2 text-4xl leading-tight text-[#17332e] md:text-5xl">Welcome back.</h1><p className="mt-3 text-sm text-muted-foreground">{user.email??'Signed in user'} · {roleLabel}</p></div><div className="flex flex-wrap gap-3">{dashboardHref!=='/account'&&<Link href={dashboardHref}><Button variant="outline" className="rounded-xl border-[#cfc9bc] bg-white">Open dashboard <ArrowRight className="size-4"/></Button></Link>}<form action={signOut}><Button type="submit" variant="outline" className="rounded-xl border-[#cfc9bc] bg-white text-[#17332e]"><LogOut className="size-4"/> Sign out</Button></form></div></div><div className="mt-8 grid gap-5 md:grid-cols-2"><Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Plane className="size-5 text-primary"/> Trips</CardTitle></CardHeader><CardContent>{bookings?.length?<div className="divide-y">{bookings.map(b=><Link key={b.id} href={`/booking/${b.id}`} className="block py-3 first:pt-0 last:pb-0"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#17332e]">{b.properties?.name??'Stay'}</p><p className="text-xs text-muted-foreground">{b.booking_reference}</p><p className="mt-1 text-sm text-muted-foreground">{b.check_in} → {b.check_out} · {b.guests} guest{b.guests===1?'':'s'}</p></div><div className="shrink-0 text-right"><p className="font-bold text-[#17332e]">{formatINR(Number(b.total_amount))}</p><BookingStatusBadge status={b.status}/></div></div></Link>)}</div>:<><p className="text-sm leading-6 text-muted-foreground">Your upcoming and completed stays will appear here.</p><Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4"/></Button></Link></>}</CardContent></Card><Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Heart className="size-5 text-primary"/> Wishlist</CardTitle></CardHeader><CardContent><p className="text-3xl font-black text-[#17332e]">{wishlistCount??0}</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Properties saved for future trips.</p><Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4"/></Button></Link></CardContent></Card><Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Star className="size-5 text-primary"/> Reviews</CardTitle></CardHeader><CardContent><p className="text-3xl font-black text-[#17332e]">{reviewCount??0}</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Verified reviews you have submitted.</p><Link href="/account/reviews"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Manage reviews <ArrowRight className="size-4"/></Button></Link></CardContent></Card><Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><ShieldCheck className="size-5 text-primary"/> Account & security</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Your session is managed securely through Supabase Auth.</p><Link href="/"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Back to homepage <ArrowRight className="size-4"/></Button></Link></CardContent></Card></div></section></main>
 }
