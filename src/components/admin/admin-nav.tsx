@@ -7,7 +7,12 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ExitAdminButton } from '@/components/admin/exit-admin-button'
 
-const items = [
+const items: {
+  href: string
+  label: string
+  icon: typeof BarChart3
+  badge?: string
+}[] = [
   { href: '/admin', label: 'Overview', icon: BarChart3 },
   { href: '/admin/properties', label: 'Properties', icon: Building2 },
   { href: '/admin/users', label: 'Users', icon: Users },
@@ -16,7 +21,7 @@ const items = [
   { href: '/admin/reviews', label: 'Reviews', icon: Star },
   { href: '/admin/verification', label: 'Verification', icon: ShieldCheck, badge: 'Queue' },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
-] as const
+]
 
 const primaryMobileItems = items.slice(0, 5)
 const secondaryMobileItems = items.slice(5)
@@ -93,7 +98,15 @@ export function AdminNav({ mobile = false }: { mobile?: boolean }) {
       {items.map(({ href, label, icon: Icon, badge }) => {
         const active = href === '/admin' ? pathname === '/admin' : pathname === href || pathname.startsWith(`${href}/`)
         return (
-          <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={cn('group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition', active ? 'bg-white text-[#183a31] shadow-sm ring-1 ring-black/5' : 'text-[#66766f] hover:bg-white/80 hover:text-[#183a31]')}>
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition',
+              active ? 'bg-white text-[#183a31] shadow-sm ring-1 ring-black/5' : 'text-[#66766f] hover:bg-white/80 hover:text-[#183a31]'
+            )}
+          >
             <Icon className={cn('size-4', active && 'text-[#d4942f]')} />
             <span>{label}</span>
             {badge && !active && <span className="ml-auto rounded-full bg-[#e7b65d]/20 px-2 py-0.5 text-[9px] font-bold text-[#a8731f]">{badge}</span>}
