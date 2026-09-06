@@ -40,11 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           <div className="px-5 pt-6"><p className="px-3 pb-2 text-[9px] font-bold uppercase tracking-[.18em] text-[#8a9892]">Platform</p><AdminNav /></div>
 
-          <div className="mt-auto space-y-3 p-5">
-            <div className="rounded-[24px] border border-[#dbe3de] bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2"><span className="size-2 rounded-full bg-emerald-500" /><span className="text-xs font-bold">All core services online</span></div>
-              <p className="mt-1 text-[10px] leading-5 text-[#7a8983]">Authentication, inventory and booking operations are available.</p>
-            </div>
+          <div className="mt-auto p-5">
             <div className="grid gap-1">
               <Link href="/" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-xs font-semibold text-[#65766f] transition hover:bg-white hover:text-[#183a31]"><ArrowLeft className="size-3.5" /> Public marketplace</Link>
               <ExitAdminButton />
