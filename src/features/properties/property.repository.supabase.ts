@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Property, Room, VerificationLevel } from '@/types/domain'
+import type { Property, PropertyMedia, Room, VerificationLevel } from '@/types/domain'
 import type { PropertyRepository, PropertySearchInput } from './property.repository'
 
 /** Fallback image used when a property has no hero image or media yet. */
@@ -30,7 +30,7 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
          host:host_profiles!inner(display_name),
          rooms:rooms(id, name, description, max_guests, base_price, room_type, beds, bathroom_type),
          property_amenities(amenity:amenities(name)),
-         property_media(url, alt_text, sort_order, is_hero)`
+         property_media(id, url, alt_text, sort_order, is_hero, media_type, room_id)`
       )
       .eq('status', 'PUBLISHED')
       .order('rating', { ascending: false })
@@ -43,25 +43,14 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
     }
 
     const district = input?.district?.trim()
-    if (district) {
-      query = query.eq('district', district)
-    }
+    if (district) query = query.eq('district', district)
 
     const propertyType = input?.propertyType?.trim()
-    if (propertyType) {
-      query = query.eq('property_type', propertyType)
-    }
+    if (propertyType) query = query.eq('property_type', propertyType)
 
-    if (input?.minPrice != null) {
-      query = query.gte('price_from', input.minPrice)
-    }
-    if (input?.maxPrice != null) {
-      query = query.lte('price_from', input.maxPrice)
-    }
-
-    if (input?.minVerification != null) {
-      query = query.gte('verification_level', input.minVerification)
-    }
+    if (input?.minPrice != null) query = query.gte('price_from', input.minPrice)
+    if (input?.maxPrice != null) query = query.lte('price_from', input.maxPrice)
+    if (input?.minVerification != null) query = query.gte('verification_level', input.minVerification)
 
     const { data, error } = await query
     if (error) {
@@ -71,15 +60,13 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
 
     let rows = data ?? []
 
-    // Amenity filtering must happen in-memory because amenities are a nested
-    // relation (property_amenities -> amenities.name).
     if (input?.amenities && input.amenities.length > 0) {
       const wanted = input.amenities.map((a) => a.toLowerCase())
       rows = rows.filter((row: any) => {
         const names = (row.property_amenities ?? [])
           .map((pa: any) => pa.amenity?.name?.toLowerCase())
           .filter(Boolean)
-        return wanted.every((w) => names.includes(w))
+        return wanted.every((wantedAmenity) => names.includes(wantedAmenity))
       })
     }
 
@@ -97,7 +84,7 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
          host:host_profiles!inner(display_name),
          rooms:rooms(id, name, description, max_guests, base_price, room_type, beds, bathroom_type),
          property_amenities(amenity:amenities(name)),
-         property_media(url, alt_text, sort_order, is_hero)`
+         property_media(id, url, alt_text, sort_order, is_hero, media_type, room_id)`
       )
       .eq('id', id)
       .eq('status', 'PUBLISHED')
@@ -108,7 +95,6 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
       return null
     }
     if (!data) return null
-
     return this.toProperty(data)
   }
 
@@ -123,7 +109,7 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
          host:host_profiles!inner(display_name),
          rooms:rooms(id, name, description, max_guests, base_price, room_type, beds, bathroom_type),
          property_amenities(amenity:amenities(name)),
-         property_media(url, alt_text, sort_order, is_hero)`
+         property_media(id, url, alt_text, sort_order, is_hero, media_type, room_id)`
       )
       .eq('slug', slug)
       .eq('status', 'PUBLISHED')
@@ -134,34 +120,43 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
       return null
     }
     if (!data) return null
-
     return this.toProperty(data)
   }
 
   /** Map a raw Supabase row into the public Property projection. */
   private toProperty(row: any): Property {
-    const rooms: Room[] = (row.rooms ?? []).map((r: any) => ({
-      id: r.id,
-      name: r.name,
-      maxGuests: r.max_guests,
-      beds: r.beds ?? '',
-      bathroom: r.bathroom_type ?? '',
-      price: Number(r.base_price ?? 0),
+    const media: PropertyMedia[] = (row.property_media ?? [])
+      .map((mediaRow: any) => ({
+        id: mediaRow.id,
+        url: mediaRow.url,
+        altText: mediaRow.alt_text ?? '',
+        sortOrder: Number(mediaRow.sort_order ?? 0),
+        isHero: Boolean(mediaRow.is_hero),
+        roomId: mediaRow.room_id ?? null,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+
+    const rooms: Room[] = (row.rooms ?? []).map((roomRow: any) => ({
+      id: roomRow.id,
+      name: roomRow.name,
+      maxGuests: roomRow.max_guests,
+      beds: roomRow.beds ?? '',
+      bathroom: roomRow.bathroom_type ?? '',
+      price: Number(roomRow.base_price ?? 0),
+      description: roomRow.description ?? '',
+      roomType: roomRow.room_type ?? '',
+      images: media.filter((mediaRow) => mediaRow.roomId === roomRow.id),
     }))
 
     const amenities: string[] = (row.property_amenities ?? [])
       .map((pa: any) => pa.amenity?.name)
       .filter(Boolean)
 
-    const media = (row.property_media ?? []) as Array<{
-      url: string
-      sort_order: number
-      is_hero: boolean
-    }>
     const hero =
-      media.find((m) => m.is_hero)?.url ??
-      [...media].sort((a, b) => a.sort_order - b.sort_order)[0]?.url ??
+      media.find((mediaRow) => mediaRow.isHero && !mediaRow.roomId)?.url ??
+      media.find((mediaRow) => !mediaRow.roomId)?.url ??
       row.hero_image ??
+      media[0]?.url ??
       ''
 
     return {
@@ -183,6 +178,7 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
       hostName: row.host?.display_name ?? '',
       latitude: row.latitude ?? 0,
       longitude: row.longitude ?? 0,
+      media,
       rooms,
     }
   }
