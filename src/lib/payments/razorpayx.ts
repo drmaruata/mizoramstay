@@ -9,7 +9,7 @@ function credentials() {
   return { keyId, keySecret }
 }
 
-function accountNumber() {
+function sourceAccountNumber() {
   const value = process.env.RAZORPAYX_ACCOUNT_NUMBER
   if (!value) throw new Error('RAZORPAYX_ACCOUNT_NUMBER is not configured.')
   return value
@@ -43,11 +43,7 @@ export type RazorpayXValidation = {
   id: string
   status: 'created' | 'completed' | 'failed' | string
   utr?: string | null
-  validation_results?: {
-    account_status?: string | null
-    registered_name?: string | null
-    name_match_score?: number | null
-  }
+  validation_results?: { account_status?: string | null; registered_name?: string | null; name_match_score?: number | null }
   fund_account?: {
     id: string
     active?: boolean
@@ -83,16 +79,12 @@ export async function validateHostBankAccount(input: {
   return razorpayXFetch<RazorpayXValidation>('/fund_accounts/validations', {
     method: 'POST',
     body: JSON.stringify({
-      source_account_number: accountNumber(),
+      source_account_number: sourceAccountNumber(),
       validation_type: 'optimized',
       reference_id: input.referenceId.slice(0, 40),
       fund_account: {
         account_type: 'bank_account',
-        bank_account: {
-          name: input.beneficiaryName,
-          ifsc: input.ifsc.toUpperCase(),
-          account_number: input.accountNumber,
-        },
+        bank_account: { name: input.beneficiaryName, ifsc: input.ifsc.toUpperCase(), account_number: input.accountNumber },
         contact: {
           name: input.beneficiaryName,
           email: input.email,
@@ -121,7 +113,7 @@ export async function createRazorpayXPayout(input: {
     method: 'POST',
     headers: { 'X-Payout-Idempotency': input.idempotencyKey },
     body: JSON.stringify({
-      account_number: accountNumber(),
+      account_number: sourceAccountNumber(),
       fund_account_id: input.fundAccountId,
       amount: input.amountInSubunits,
       currency: 'INR',
