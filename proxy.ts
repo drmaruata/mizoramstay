@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { dashboardPathForRole } from "@/lib/auth/dashboard";
 
 /**
  * Next.js 16 proxy (formerly middleware).
@@ -57,7 +58,7 @@ export async function proxy(request: NextRequest) {
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
     role = profile?.role ?? null;
   }
 
@@ -66,10 +67,10 @@ export async function proxy(request: NextRequest) {
   const isAdminRoute = pathname.startsWith("/admin");
   const isAccountRoute = pathname.startsWith("/account");
 
-  // Redirect authenticated users away from auth pages.
+  // Redirect authenticated users away from auth pages to the correct portal.
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = dashboardPathForRole(role);
     return NextResponse.redirect(url);
   }
 
