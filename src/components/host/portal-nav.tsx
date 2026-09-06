@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, CalendarDays, ClipboardList, Home, MessageSquare, MoreHorizontal, Settings, Wallet } from 'lucide-react'
+import { BarChart3, CalendarDays, ClipboardList, Home, MessageSquare, MoreHorizontal, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ExitPortalButton } from '@/components/host/exit-portal-button'
@@ -65,10 +65,10 @@ export function PortalNav({ mobile = false }: { mobile?: boolean }) {
             <button
               type="button"
               aria-label="Close more menu"
-              className="fixed inset-0 z-[-1] bg-black/5"
+              className="fixed inset-0 z-0 bg-black/10"
               onClick={() => setMoreOpen(false)}
             />
-            <div className="absolute bottom-[calc(100%+10px)] right-1 w-56 rounded-3xl border border-[#d9e1dc] bg-[#fbf9f4] p-2 shadow-[0_18px_55px_rgba(21,70,55,.16)]">
+            <div className="absolute bottom-[calc(100%+10px)] right-1 z-20 w-56 rounded-3xl border border-[#d9e1dc] bg-[#fbf9f4] p-2 shadow-[0_18px_55px_rgba(21,70,55,.16)]">
               <p className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#93a099]">More in your studio</p>
               <div className="space-y-1">
                 {secondaryMobileItems.map(({ href, label, icon: Icon }) => (
@@ -82,7 +82,7 @@ export function PortalNav({ mobile = false }: { mobile?: boolean }) {
           </>
         )}
 
-        <nav className="grid grid-cols-5 gap-1" aria-label="Host navigation">
+        <nav className="relative z-10 grid grid-cols-5 gap-1" aria-label="Host navigation">
           {primaryMobileItems.map(({ href, label, icon: Icon }) => (
             <NavLink key={href} href={href} label={label} Icon={Icon} mobile />
           ))}
@@ -118,13 +118,7 @@ export function PortalNav({ mobile = false }: { mobile?: boolean }) {
 export function HostUtilityNav() {
   return (
     <div className="mt-6 border-t border-[#d9e1dc] pt-5">
-      <Link
-        href="#"
-        className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-[#6b7b75] transition hover:bg-white/70 hover:text-[#154637]"
-      >
-        <Settings className="size-4" /> Settings
-      </Link>
-      <div className="mt-1">
+      <div>
         <ExitPortalButton />
       </div>
     </div>
