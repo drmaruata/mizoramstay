@@ -66,12 +66,12 @@ export default async function HostCalendarPage({
           </div>
           <div className="flex gap-2 self-start sm:self-auto">
             <Link href={`/host/calendar?month=${prevParam}`}>
-              <Button variant="outline" size="icon" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]" aria-label="Previous month">
+              <Button variant="outline" size="icon-sm" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]" aria-label="Previous month">
                 <ChevronLeft className="size-4" />
               </Button>
             </Link>
             <Link href={`/host/calendar?month=${nextParam}`}>
-              <Button variant="outline" size="icon" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]" aria-label="Next month">
+              <Button variant="outline" size="icon-sm" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]" aria-label="Next month">
                 <ChevronRight className="size-4" />
               </Button>
             </Link>
