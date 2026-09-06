@@ -4,10 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PortalShell } from '@/components/host/portal-shell'
-import { requireHost } from '@/lib/auth/session'
-import { createClient } from '@/lib/supabase/server'
 import { HostPayoutService } from '@/features/payments/host-payout.service'
 import { formatINR } from '@/lib/utils'
+import { requireHost } from '@/lib/auth/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,27 +27,17 @@ function statusVariant(status: string) {
 
 export default async function HostRevenuePage() {
   const user = await requireHost()
-  const db = await createClient()
+  const db = await (await import('@/lib/supabase/server')).createClient()
   const payoutService = new HostPayoutService(db)
   const hostId = await payoutService.getHostProfileId()
 
   const summary = hostId
     ? await payoutService.getRevenueSummary(hostId)
-    : {
-        currentMonthGross: 0,
-        previousMonthGross: 0,
-        currentMonthCommission: 0,
-        currentMonthNet: 0,
-        pendingPayout: 0,
-        scheduledPayout: 0,
-        paidPayout: 0,
-        payoutRows: [],
-      }
+    : { currentMonthGross: 0, previousMonthGross: 0, currentMonthCommission: 0, currentMonthNet: 0, pendingPayout: 0, scheduledPayout: 0, paidPayout: 0, payoutRows: [] }
 
   const grossDelta = summary.previousMonthGross > 0
     ? Math.round(((summary.currentMonthGross - summary.previousMonthGross) / summary.previousMonthGross) * 100)
     : null
-
   const payoutReady = summary.pendingPayout + summary.scheduledPayout
   const hostLabel = user.email?.split('@')[0] ?? 'Host'
 
@@ -56,24 +45,12 @@ export default async function HostRevenuePage() {
     <PortalShell>
       <div className="mx-auto w-full max-w-[1240px] space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#81918a]">Payouts & earnings</p>
-            <h1 className="mt-2 text-3xl font-black tracking-[-.04em] text-[#17332e] sm:text-[40px]">Revenue</h1>
-            <p className="mt-2 text-sm leading-6 text-[#66776f]">Track booking value, commission, payout status and settlement history for your properties.</p>
-          </div>
-          <Button variant="outline" disabled className="rounded-xl border-[#d7dfda] bg-white text-[#17332e]">
-            <Banknote className="size-4" /> Payout settings
-          </Button>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#81918a]">Payouts & earnings</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] text-[#17332e] sm:text-[40px]">Revenue</h1><p className="mt-2 text-sm leading-6 text-[#66776f]">Track booking value, commission, payout status and settlement history for your properties.</p></div>
+          <Link href="/host/revenue/settings"><Button variant="outline" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]"><Banknote className="size-4" /> Payout settings</Button></Link>
         </div>
 
         {!hostId ? (
-          <Card className="rounded-[28px] border-[#d6ded9] shadow-sm">
-            <CardContent className="p-8 text-center">
-              <WalletCards className="mx-auto size-8 text-[#59736a]" />
-              <p className="mt-3 font-bold text-[#17332e]">Complete your host setup to view earnings.</p>
-              <Link href="/host/properties" className="mt-4 inline-flex rounded-xl bg-[#154637] px-4 py-2.5 text-sm font-bold text-white">Manage properties</Link>
-            </CardContent>
-          </Card>
+          <Card className="rounded-[28px] border-[#d6ded9] shadow-sm"><CardContent className="p-8 text-center"><WalletCards className="mx-auto size-8 text-[#59736a]" /><p className="mt-3 font-bold text-[#17332e]">Complete your host setup to view earnings.</p><Link href="/host/properties" className="mt-4 inline-flex rounded-xl bg-[#154637] px-4 py-2.5 text-sm font-bold text-white">Manage properties</Link></CardContent></Card>
         ) : (
           <>
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Revenue summary">
@@ -84,33 +61,8 @@ export default async function HostRevenuePage() {
             </section>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <Card className="rounded-[28px] border-[#d6ded9] shadow-[0_8px_26px_rgba(21,70,55,.045)]">
-                <CardHeader className="border-b border-[#edf0ed] px-5 pb-4 pt-5 md:px-6 md:pt-6">
-                  <div className="flex items-center justify-between gap-3"><div><CardTitle className="text-xl text-[#17332e]">Payout statement</CardTitle><p className="mt-1 text-xs text-muted-foreground">Every payout is linked to a booking and property.</p></div><span className="text-xs font-semibold text-[#708079]">{summary.payoutRows.length} record{summary.payoutRows.length === 1 ? '' : 's'}</span></div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {summary.payoutRows.length === 0 ? (
-                    <div className="grid min-h-52 place-items-center p-8 text-center"><div><span className="mx-auto grid size-11 place-items-center rounded-2xl bg-[#eaf2ed] text-[#154637]"><WalletCards className="size-5" /></span><p className="mt-3 text-sm font-bold text-[#17332e]">No payout records yet</p><p className="mt-1 text-sm text-[#7c8984]">Payout records are created when paid bookings are confirmed.</p></div></div>
-                  ) : (
-                    <div className="divide-y divide-[#e8ede9]">
-                      {summary.payoutRows.map((row) => (
-                        <div key={row.id} className="p-5 transition hover:bg-[#fbfcfa]">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-black text-[#17332e]">{row.bookingReference}</p><Badge variant={statusVariant(row.status)}>{row.status.replace(/_/g, ' ')}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{row.propertyName} · {row.checkIn} → {row.checkOut}</p></div>
-                            <div className="flex items-center gap-4"><div className="text-right"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#82908a]">Host net</p><p className="font-black text-[#17332e]">{formatINR(Math.round(row.netAmount))}</p></div><div className="grid size-10 place-items-center rounded-xl bg-[#f3f6f3] text-[#59736a]"><CalendarDays className="size-4" /></div></div>
-                          </div>
-                          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Gross" value={formatINR(Math.round(row.grossAmount))} /><Metric label="Commission" value={formatINR(Math.round(row.platformCommission))} /><Metric label="Adjustments" value={formatINR(Math.round(row.refundAdjustment))} /><Metric label="Settlement" value={formatDate(row.paidAt ?? row.scheduledAt)} /></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <div className="space-y-6">
-                <Card className="rounded-[28px] border-[#d6ded9] bg-[#f7f2e7] shadow-[0_8px_26px_rgba(21,70,55,.045)]"><CardHeader><CardTitle className="text-xl text-[#17332e]">Payout status</CardTitle></CardHeader><CardContent className="space-y-4"><StatusRow label="Pending" value={summary.pendingPayout} /><StatusRow label="Scheduled" value={summary.scheduledPayout} /><StatusRow label="Paid" value={summary.paidPayout} /><div className="border-t border-[#e0d7c8] pt-4"><p className="text-xs leading-5 text-muted-foreground">Payout timing is recorded per booking. Final settlement may be adjusted for refunds, payment costs or other applicable deductions.</p></div></CardContent></Card>
-                <Card className="rounded-[28px] border-[#d6ded9] shadow-[0_8px_26px_rgba(21,70,55,.045)]"><CardHeader><CardTitle className="text-xl text-[#17332e]">Revenue hygiene</CardTitle></CardHeader><CardContent className="space-y-4"><div className="flex items-start gap-3"><ArrowDownRight className="mt-0.5 size-4 text-[#9a651e]" /><div><p className="text-sm font-bold">Gross and net stay separate</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Gross booking value includes the host room subtotal. Platform commission is tracked separately in each payout record.</p></div></div><div className="flex items-start gap-3"><WalletCards className="mt-0.5 size-4 text-[#9a651e]" /><div><p className="text-sm font-bold">Host: {hostLabel}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Payout records are scoped to your authenticated host profile through Supabase RLS.</p></div></div><Link href="/host/properties"><Button variant="outline" className="w-full rounded-xl border-[#d8ccba] bg-white text-[#17332e] hover:bg-white hover:text-[#17332e]">Manage properties</Button></Link></CardContent></Card>
-              </div>
+              <Card className="rounded-[28px] border-[#d6ded9] shadow-[0_8px_26px_rgba(21,70,55,.045)]"><CardHeader className="border-b border-[#edf0ed] px-5 pb-4 pt-5 md:px-6 md:pt-6"><div className="flex items-center justify-between gap-3"><div><CardTitle className="text-xl text-[#17332e]">Payout statement</CardTitle><p className="mt-1 text-xs text-muted-foreground">Every payout is linked to a booking and property.</p></div><span className="text-xs font-semibold text-[#708079]">{summary.payoutRows.length} record{summary.payoutRows.length === 1 ? '' : 's'}</span></div></CardHeader><CardContent className="p-0">{summary.payoutRows.length === 0 ? <div className="grid min-h-52 place-items-center p-8 text-center"><div><span className="mx-auto grid size-11 place-items-center rounded-2xl bg-[#eaf2ed] text-[#154637]"><WalletCards className="size-5" /></span><p className="mt-3 text-sm font-bold text-[#17332e]">No payout records yet</p><p className="mt-1 text-sm text-[#7c8984]">Payout records are created when paid bookings are confirmed.</p></div></div> : <div className="divide-y divide-[#e8ede9]">{summary.payoutRows.map((row) => <div key={row.id} className="p-5 transition hover:bg-[#fbfcfa]"><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-black text-[#17332e]">{row.bookingReference}</p><Badge variant={statusVariant(row.status)}>{row.status.replace(/_/g, ' ')}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{row.propertyName} · {row.checkIn} → {row.checkOut}</p></div><div className="flex items-center gap-4"><div className="text-right"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#82908a]">Host net</p><p className="font-black text-[#17332e]">{formatINR(Math.round(row.netAmount))}</p></div><div className="grid size-10 place-items-center rounded-xl bg-[#f3f6f3] text-[#59736a]"><CalendarDays className="size-4" /></div></div></div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric label="Gross" value={formatINR(Math.round(row.grossAmount))} /><Metric label="Commission" value={formatINR(Math.round(row.platformCommission))} /><Metric label="Adjustments" value={formatINR(Math.round(row.refundAdjustment))} /><Metric label="Settlement" value={formatDate(row.paidAt ?? row.scheduledAt)} /></div></div>)}</div>}</CardContent></Card>
+              <div className="space-y-6"><Card className="rounded-[28px] border-[#d6ded9] bg-[#f7f2e7] shadow-[0_8px_26px_rgba(21,70,55,.045)]"><CardHeader><CardTitle className="text-xl text-[#17332e]">Payout status</CardTitle></CardHeader><CardContent className="space-y-4"><StatusRow label="Pending" value={summary.pendingPayout} /><StatusRow label="Scheduled" value={summary.scheduledPayout} /><StatusRow label="Paid" value={summary.paidPayout} /></CardContent></Card></div>
             </div>
           </>
         )}
