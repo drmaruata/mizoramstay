@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/booking-hold-cleanup",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
