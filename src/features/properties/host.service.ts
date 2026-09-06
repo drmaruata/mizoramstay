@@ -59,6 +59,29 @@ export interface HostPropertySummary {
   updatedAt: string
 }
 
+export interface PropertyMediaDraft {
+  id: string
+  url: string
+  altText: string
+  sortOrder: number
+  isHero: boolean
+  mediaType: string
+  roomId: string | null
+  storagePath: string | null
+}
+
+export interface SavedRoom {
+  id: string
+  name: string
+}
+
+export interface PropertySaveResult {
+  id: string
+  slug: string
+  rooms: SavedRoom[]
+  media: PropertyMediaDraft[]
+}
+
 export class HostPropertyService {
   constructor(private db: SupabaseClient) {}
 
@@ -117,12 +140,12 @@ export class HostPropertyService {
 
   /**
    * Create a property (plus its rooms and amenity links) for a host.
-   * Returns the new property id.
+   * Returns the new property id, slug, room ids, and currently stored media.
    */
   async createProperty(
     hostProfileId: string,
     input: HostPropertyInput
-  ): Promise<{ id: string; slug: string }> {
+  ): Promise<PropertySaveResult> {
     const parsed = hostPropertySchema.parse(input)
     const slug = await this.generateUniqueSlug(parsed.name)
 
@@ -156,10 +179,11 @@ export class HostPropertyService {
       throw new Error(error.message)
     }
 
-    await this.upsertRooms(property.id, parsed.rooms)
+    const rooms = await this.upsertRooms(property.id, parsed.rooms)
     await this.replaceAmenities(property.id, parsed.amenityIds)
+    const media = await this.listPropertyMedia(property.id)
 
-    return { id: property.id, slug: property.slug }
+    return { id: property.id, slug: property.slug, rooms, media }
   }
 
   /**
@@ -169,7 +193,7 @@ export class HostPropertyService {
   async updateProperty(
     propertyId: string,
     input: HostPropertyInput
-  ): Promise<{ id: string; slug: string }> {
+  ): Promise<PropertySaveResult> {
     const parsed = hostPropertySchema.parse(input)
 
     const { data: property, error } = await this.db
@@ -199,10 +223,11 @@ export class HostPropertyService {
       throw new Error(error.message)
     }
 
-    await this.upsertRooms(propertyId, parsed.rooms)
+    const rooms = await this.upsertRooms(propertyId, parsed.rooms)
     await this.replaceAmenities(propertyId, parsed.amenityIds)
+    const media = await this.listPropertyMedia(propertyId)
 
-    return { id: property.id, slug: property.slug }
+    return { id: property.id, slug: property.slug, rooms, media }
   }
 
   /** Delete a property (cascades to rooms, media, amenities). */
@@ -227,22 +252,36 @@ export class HostPropertyService {
   }
 
   /**
-   * Fetch a single property (with rooms) for the host edit form.
+   * Fetch a single property (with rooms and room-specific media) for the host edit form.
    * Returns null when the property is not found or not owned by this host.
    */
-  async getForEdit(propertyId: string): Promise<HostPropertyInput & { id: string; slug: string } | null> {
+  async getForEdit(propertyId: string): Promise<HostPropertyInput & { id: string; slug: string; media: PropertyMediaDraft[] } | null> {
     const { data, error } = await this.db
       .from('properties')
       .select(
         `id, slug, name, property_type, description, address, village, town, district,
          pincode, latitude, longitude, check_in_time, check_out_time, cancellation_policy,
          rooms:rooms(id, name, description, max_guests, base_price, room_type, beds, bathroom_type),
-         property_amenities(amenity_id)`
+         property_amenities(amenity_id),
+         property_media(id, url, alt_text, sort_order, is_hero, media_type, room_id, storage_path)`
       )
       .eq('id', propertyId)
       .maybeSingle()
 
     if (error || !data) return null
+
+    const media: PropertyMediaDraft[] = (data.property_media ?? [])
+      .map((m: any) => ({
+        id: m.id,
+        url: m.url,
+        altText: m.alt_text ?? '',
+        sortOrder: Number(m.sort_order ?? 0),
+        isHero: Boolean(m.is_hero),
+        mediaType: m.media_type ?? 'IMAGE',
+        roomId: m.room_id ?? null,
+        storagePath: m.storage_path ?? null,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
 
     return {
       id: data.id,
@@ -271,7 +310,32 @@ export class HostPropertyService {
         beds: r.beds ?? '',
         bathroomType: r.bathroom_type ?? '',
       })),
+      media,
     }
+  }
+
+  private async listPropertyMedia(propertyId: string): Promise<PropertyMediaDraft[]> {
+    const { data, error } = await this.db
+      .from('property_media')
+      .select('id, url, alt_text, sort_order, is_hero, media_type, room_id, storage_path')
+      .eq('property_id', propertyId)
+      .order('sort_order', { ascending: true })
+
+    if (error) {
+      console.error('[HostPropertyService] listPropertyMedia error:', error.message)
+      return []
+    }
+
+    return (data ?? []).map((m: any) => ({
+      id: m.id,
+      url: m.url,
+      altText: m.alt_text ?? '',
+      sortOrder: Number(m.sort_order ?? 0),
+      isHero: Boolean(m.is_hero),
+      mediaType: m.media_type ?? 'IMAGE',
+      roomId: m.room_id ?? null,
+      storagePath: m.storage_path ?? null,
+    }))
   }
 
   // ------------------------------------------------------------------
@@ -299,10 +363,12 @@ export class HostPropertyService {
     return `${candidate}-${Math.random().toString(36).slice(2, 8)}`
   }
 
-  private async upsertRooms(propertyId: string, rooms: HostPropertyInput['rooms']): Promise<void> {
+  private async upsertRooms(propertyId: string, rooms: HostPropertyInput['rooms']): Promise<SavedRoom[]> {
+    const saved: SavedRoom[] = []
+
     for (const room of rooms) {
       if (room.id) {
-        await this.db
+        const { data, error } = await this.db
           .from('rooms')
           .update({
             name: room.name,
@@ -315,19 +381,33 @@ export class HostPropertyService {
             updated_at: new Date().toISOString(),
           })
           .eq('id', room.id)
+          .select('id, name')
+          .single()
+
+        if (error) throw new Error(error.message)
+        saved.push({ id: data.id, name: data.name })
       } else {
-        await this.db.from('rooms').insert({
-          property_id: propertyId,
-          name: room.name,
-          description: room.description || null,
-          max_guests: room.maxGuests,
-          base_price: room.basePrice,
-          room_type: room.roomType || null,
-          beds: room.beds || null,
-          bathroom_type: room.bathroomType || null,
-        })
+        const { data, error } = await this.db
+          .from('rooms')
+          .insert({
+            property_id: propertyId,
+            name: room.name,
+            description: room.description || null,
+            max_guests: room.maxGuests,
+            base_price: room.basePrice,
+            room_type: room.roomType || null,
+            beds: room.beds || null,
+            bathroom_type: room.bathroomType || null,
+          })
+          .select('id, name')
+          .single()
+
+        if (error) throw new Error(error.message)
+        saved.push({ id: data.id, name: data.name })
       }
     }
+
+    return saved
   }
 
   private async replaceAmenities(propertyId: string, amenityIds: string[]): Promise<void> {
