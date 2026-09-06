@@ -32,7 +32,7 @@ export default async function HostCalendarPage({
   const { month } = await searchParams
   const now = new Date()
   let year = now.getFullYear()
-  let monthIndex = now.getMonth() // 0-based
+  let monthIndex = now.getMonth()
 
   if (month && /^\d{4}-\d{2}$/.test(month)) {
     const [y, m] = month.split('-').map(Number)
@@ -57,113 +57,84 @@ export default async function HostCalendarPage({
 
   return (
     <PortalShell>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Inventory</p>
-          <h1 className="mt-1 text-3xl font-black">
-            {MONTH_NAMES[monthIndex]} {year}
-          </h1>
+      <div className="mx-auto w-full max-w-[1240px] space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#81918a]">Inventory</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-.04em] text-[#17332e] sm:text-[40px]">{MONTH_NAMES[monthIndex]} {year}</h1>
+            <p className="mt-2 text-sm leading-6 text-[#66776f]">Control room availability by room and date.</p>
+          </div>
+          <div className="flex gap-2 self-start sm:self-auto">
+            <Link href={`/host/calendar?month=${prevParam}`}>
+              <Button variant="outline" size="icon" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]" aria-label="Previous month">
+                <ChevronLeft className="size-4" />
+              </Button>
+            </Link>
+            <Link href={`/host/calendar?month=${nextParam}`}>
+              <Button variant="outline" size="icon" className="rounded-xl border-[#d7dfda] bg-white text-[#17332e] hover:bg-[#f7faf7] hover:text-[#17332e]" aria-label="Next month">
+                <ChevronRight className="size-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/host/calendar?month=${prevParam}`}>
-            <Button variant="outline" size="sm">
-              <ChevronLeft className="size-4" />
-            </Button>
-          </Link>
-          <Link href={`/host/calendar?month=${nextParam}`}>
-            <Button variant="outline" size="sm">
-              <ChevronRight className="size-4" />
-            </Button>
-          </Link>
-        </div>
-      </div>
 
-      {!hostProfileId ? (
-        <Card className="mt-6">
-          <CardContent className="p-8 text-center">
-            <p className="font-semibold">You are not set up as a host yet.</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Complete your host profile to manage your calendar.
-            </p>
-          </CardContent>
-        </Card>
-      ) : calendars.length === 0 ? (
-        <Card className="mt-6">
-          <CardContent className="p-8 text-center">
-            <p className="font-semibold">No active rooms</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Add rooms to your published properties to see availability here.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="size-5 text-primary" /> Room availability
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-5">
-              <InventoryBlockForm
-                rooms={calendars.map((c) => ({
-                  id: c.roomId,
-                  name: c.roomName,
-                  propertyName: c.propertyName,
-                }))}
-              />
-            </div>
-            <div className="mb-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <i className="size-3 rounded bg-primary/10" /> Available
-              </span>
-              <span className="flex items-center gap-2">
-                <i className="size-3 rounded bg-accent/70" /> Booked
-              </span>
-              <span className="flex items-center gap-2">
-                <i className="size-3 rounded bg-foreground/15" /> Blocked
-              </span>
-              <span className="flex items-center gap-2">
-                <i className="size-3 rounded bg-muted" /> Unavailable
-              </span>
-            </div>
+        {!hostProfileId ? (
+          <Card className="rounded-[28px] border-[#d6ded9] shadow-[0_8px_26px_rgba(21,70,55,.045)]">
+            <CardContent className="p-8 text-center">
+              <p className="font-semibold text-[#17332e]">You are not set up as a host yet.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Complete your host profile to manage your calendar.</p>
+            </CardContent>
+          </Card>
+        ) : calendars.length === 0 ? (
+          <Card className="rounded-[28px] border-[#d6ded9] shadow-[0_8px_26px_rgba(21,70,55,.045)]">
+            <CardContent className="p-8 text-center">
+              <p className="font-semibold text-[#17332e]">No active rooms</p>
+              <p className="mt-1 text-sm text-muted-foreground">Add rooms to your published properties to see availability here.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="rounded-[28px] border-[#d6ded9] bg-white shadow-[0_8px_26px_rgba(21,70,55,.045)]">
+            <CardHeader className="border-b border-[#edf0ed] px-5 pb-4 pt-5 md:px-6 md:pt-6">
+              <CardTitle className="flex items-center gap-2 text-xl tracking-[-.025em] text-[#17332e]"><CalendarDays className="size-5 text-[#154637]" /> Room availability</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 md:p-6">
+              <div className="mb-6">
+                <InventoryBlockForm rooms={calendars.map((c) => ({ id: c.roomId, name: c.roomName, propertyName: c.propertyName }))} />
+              </div>
+              <div className="mb-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-2"><i className="size-3 rounded bg-primary/10" /> Available</span>
+                <span className="flex items-center gap-2"><i className="size-3 rounded bg-accent/70" /> Booked</span>
+                <span className="flex items-center gap-2"><i className="size-3 rounded bg-foreground/15" /> Blocked</span>
+                <span className="flex items-center gap-2"><i className="size-3 rounded bg-muted" /> Unavailable</span>
+              </div>
 
-            <div className="overflow-auto">
-              <div className="min-w-[820px]">
-                <div className="grid grid-cols-[170px_repeat(31,minmax(28px,1fr))] text-xs">
-                  <div className="border-b p-2 font-semibold">Room</div>
-                  {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
-                    <div
-                      key={d}
-                      className="border-b border-l p-2 text-center text-muted-foreground"
-                    >
-                      {d}
-                    </div>
-                  ))}
-
-                  {calendars.map((room) => (
-                    <div key={room.roomId} className="contents">
-                      <div className="border-b p-3">
-                        <p className="font-semibold">{room.roomName}</p>
-                        <p className="text-[10px] text-muted-foreground">{room.propertyName}</p>
-                      </div>
-                      {room.days.map((day) => (
-                        <div
-                          key={day.date}
-                          className={`border-b border-l p-1 ${STATE_STYLES[day.state]}`}
-                          title={`${day.date} · ${day.state.toLowerCase()}`}
-                        >
-                          <div className="h-7 rounded-md" />
+              <div className="overflow-auto rounded-2xl border border-[#dfe6e1]">
+                <div className="min-w-[820px]">
+                  <div className="grid grid-cols-[170px_repeat(31,minmax(28px,1fr))] text-xs">
+                    <div className="border-b bg-[#fafcf9] p-2 font-semibold text-[#17332e]">Room</div>
+                    {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
+                      <div key={d} className="border-b border-l bg-[#fafcf9] p-2 text-center text-muted-foreground">{d}</div>
+                    ))}
+                    {calendars.map((room) => (
+                      <div key={room.roomId} className="contents">
+                        <div className="border-b bg-white p-3">
+                          <p className="font-semibold text-[#17332e]">{room.roomName}</p>
+                          <p className="text-[10px] text-muted-foreground">{room.propertyName}</p>
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                        {room.days.map((day) => (
+                          <div key={day.date} className={`border-b border-l p-1 ${STATE_STYLES[day.state]}`} title={`${day.date} · ${day.state.toLowerCase()}`}>
+                            <div className="h-7 rounded-md" />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </PortalShell>
   )
 }
