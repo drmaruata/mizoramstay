@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Building2, CheckCircle2, MoreHorizontal, Search, ShieldAlert } from 'lucide-react'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -95,8 +96,16 @@ export default async function AdminPropertiesPage({ searchParams }: { searchPara
                 return (
                   <Link key={row.id} href={`/admin/verification?property=${encodeURIComponent(row.id)}`} className="grid gap-3 border-b border-black/5 px-5 py-4 transition hover:bg-[#fafbf9] last:border-0 lg:grid-cols-[1.9fr_1fr_1fr_1fr_44px] lg:items-center lg:gap-4">
                     <div className="flex items-center gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#e8efea] text-[#1b5d47]">
-                        {row.hero_image ? <img src={row.hero_image} alt="" className="size-full object-cover" /> : <Building2 className="size-5" />}
+                      <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#e8efea] text-[#1b5d47]">
+                        {row.hero_image ? (
+                          <Image
+                            src={row.hero_image}
+                            alt=""
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        ) : <Building2 className="size-5" />}
                       </span>
                       <div className="min-w-0"><p className="truncate font-bold">{row.name}</p><p className="mt-1 text-xs text-muted-foreground lg:hidden">{location} · Level {row.verification_level ?? 0}</p></div>
                     </div>
