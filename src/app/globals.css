@@ -63,6 +63,10 @@ button, input, select { font: inherit; }
 
 .section-rule { border-color: rgba(23,51,46,.1); }
 
+/* Keep the host dashboard's white action surfaces readable when their parent card is dark. */
+a[href="/host/calendar"].bg-white { color: #154637 !important; }
+a[href="/host/calendar"].bg-white svg { color: #154637 !important; }
+
 @media (prefers-reduced-motion: no-preference) {
   .hover-lift { transition: transform .25s ease, box-shadow .25s ease; }
   .hover-lift:hover { transform: translateY(-3px); }
