@@ -47,7 +47,7 @@ export function PortalShell({ children, title = 'Host workspace' }: { children: 
             </div>
           </header>
 
-          <section className="min-w-0 p-4 md:p-6 lg:px-9 lg:py-8 xl:px-10">{children}</section>
+          <section className="min-w-0 p-4 md:p-6 lg:px-9 lg:py-8 xl:px-10 [&>div]:mx-auto [&>div]:w-full [&>div]:max-w-[1240px]">{children}</section>
           <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#d9e1dc] bg-[#f8f5ee]/96 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(21,70,55,.06)] backdrop-blur-xl lg:hidden">
             <PortalNav mobile />
           </nav>
