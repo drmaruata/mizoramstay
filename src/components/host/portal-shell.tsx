@@ -4,9 +4,9 @@ import { PortalNav, HostUtilityNav } from '@/components/host/portal-nav'
 
 export function PortalShell({ children, title = 'Host workspace' }: { children: React.ReactNode; title?: string }) {
   return (
-    <div className="min-h-screen bg-[#f5f1e8] text-[#18372f] selection:bg-[#cfe3d8] selection:text-[#154637]">
-      <div className="mx-auto grid min-h-screen max-w-[1520px] lg:grid-cols-[276px_1fr]">
-        <aside className="hidden border-r border-[#d9e1dc] bg-[#eaf2ed] lg:flex lg:flex-col lg:px-5 lg:py-6">
+    <div className="min-h-screen w-full bg-[#f5f1e8] text-[#18372f] selection:bg-[#cfe3d8] selection:text-[#154637]">
+      <div className="grid min-h-screen w-full lg:grid-cols-[276px_minmax(0,1fr)]">
+        <aside className="hidden h-screen w-[276px] shrink-0 overflow-y-auto border-r border-[#d9e1dc] bg-[#eaf2ed] lg:sticky lg:top-0 lg:flex lg:flex-col lg:px-5 lg:py-6">
           <Link href="/" className="flex items-center gap-3 px-3 py-1.5" aria-label="MizoramStay homepage">
             <span className="grid size-11 place-items-center rounded-2xl bg-[#154637] text-white shadow-[0_10px_25px_rgba(21,70,55,.14)]">
               <Leaf className="size-5" />
