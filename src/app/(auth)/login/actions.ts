@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { dashboardPathForRole } from "@/lib/auth/dashboard";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -29,15 +30,21 @@ export async function login(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
 
-  if (error) {
-    return { error: error.message };
+  if (error || !data.user) {
+    return { error: error?.message ?? "Unable to sign in. Please try again." };
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(dashboardPathForRole(profile?.role));
 }
