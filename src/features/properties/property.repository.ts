@@ -6,6 +6,10 @@ export interface PropertySearchInput {
   maxPrice?: number
   amenities?: string[]
   minVerification?: number
+  checkIn?: string
+  checkOut?: string
+  guests?: number
+  sort?: 'relevance' | 'price_asc' | 'price_desc' | 'rating'
 }
 
 export interface PropertyRepository<TProperty> {
