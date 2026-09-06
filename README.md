@@ -10,8 +10,8 @@ Production-oriented MVP foundation for the Mizoram tourism marketplace and homes
 | Host property CRUD (create / edit / submit for review) | ✅ Complete |
 | Search filtering (destination, district, type, price, amenities, verification) | ✅ Complete |
 | Availability check (`room_inventory`) | ✅ Complete |
-| Booking engine (service + server actions + checkout UI) | ⏳ In progress |
-| Payment integration (provider order creation, webhook signature verification) | 🔲 Stub only |
+| Booking engine (service + server actions + checkout UI) | ✅ Complete |
+| Payment integration (Razorpay order/verify + signed webhook) | ✅ Built — needs live keys |
 | Reviews, wishlists, notifications UI | 🔲 Not started (schema only) |
 
 ## Architecture
@@ -42,6 +42,33 @@ API: `/api/v1/properties`, `/api/v1/properties/[id]/availability`, `/api/v1/book
 2. Apply the migrations in `supabase/migrations/` to a Supabase project — the consolidated `20260830190000_mizoramstay_core.sql` covers the full schema, with incremental `NNNN_*.sql` files applied on top.
 3. `npm install`
 4. `npm run dev`
+
+## Payments (Razorpay)
+
+The payment flow is fully implemented server-side — the client never confirms a
+payment. Flow: booking → `POST /api/v1/payments/order` (creates a Razorpay
+order + `payments` row) → Razorpay Checkout → `POST /api/v1/payments/verify`
+(verifies the HMAC signature, fetches the payment, and confirms the booking via
+the `confirm_booking_payment_transaction` RPC). The `payment-webhook` edge
+function (`supabase/functions/payment-webhook`) verifies the
+`X-Razorpay-Signature` header, records events idempotently in `payment_events`,
+and reacts to `payment.captured` / `payment.failed` / `refund.processed`.
+
+To enable real (or test-mode) payments, set these in `.env.local`:
+
+```bash
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_WEBHOOK_SECRET=...
+```
+
+- Get test keys from the Razorpay Dashboard → Settings → API Keys.
+- Configure the webhook URL in the Razorpay Dashboard → Settings → Webhooks:
+  `https://<project-ref>.supabase.co/functions/v1/payment-webhook` with events
+  `payment.captured`, `payment.failed`, `refund.processed`, and set the webhook
+  secret to the same `RAZORPAY_WEBHOOK_SECRET`.
+- The `payment-webhook` edge function has `verify_jwt = false` (Razorpay does
+  not send a Supabase JWT); it authenticates via the Razorpay signature instead.
 
 ## Verification
 

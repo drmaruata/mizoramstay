@@ -115,7 +115,7 @@ begin
     end if;
   end loop;
 
-  v_reference := 'MZ-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(uuid_generate_v4()::text, '-', ''), 1, 8));
+  v_reference := 'MZ-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
 
   insert into public.bookings (
     booking_reference, user_id, property_id, check_in, check_out, guests,

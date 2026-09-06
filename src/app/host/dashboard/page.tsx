@@ -1,6 +1,190 @@
 import Link from 'next/link'
-import { ArrowUpRight, CalendarDays, CheckCircle2, IndianRupee, Users } from 'lucide-react'
+import {
+  ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  IndianRupee,
+  Percent,
+  Users,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PortalShell } from '@/components/host/portal-shell'
-export default function HostDashboardPage(){return <PortalShell><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><p className="text-sm text-muted-foreground">Sunday, 30 August 2026</p><h1 className="mt-1 text-3xl font-black">Good evening, Lalhmingmawia</h1></div><Link href="/host/calendar"><Button><CalendarDays className="size-4" />View calendar</Button></Link></div><div className="mt-6 grid gap-4 md:grid-cols-3"><Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Today’s bookings</p><p className="mt-2 text-3xl font-black">3</p><p className="mt-2 text-xs text-primary">+1 vs yesterday</p></CardContent></Card><Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Upcoming guests</p><p className="mt-2 text-3xl font-black">8</p><p className="mt-2 text-xs text-muted-foreground">Next 14 days</p></CardContent></Card><Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">This month’s revenue</p><p className="mt-2 flex items-center text-3xl font-black"><IndianRupee className="size-6" />42,800</p><p className="mt-2 text-xs text-primary">After platform fees pending</p></CardContent></Card></div><div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]"><Card><CardHeader><CardTitle>Upcoming reservations</CardTitle></CardHeader><CardContent className="space-y-3">{[['MZ-102873','Ananya Sharma','12–16 Oct','Deluxe Double','₹7,920'],['MZ-102861','Rahul Verma','18–20 Oct','Family Room','₹5,720'],['MZ-102844','Irene Joseph','25–27 Oct','Deluxe Double','₹4,400']].map(([id,name,date,room,amount])=><div key={id} className="flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2"><p className="font-semibold">{name}</p><span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">CONFIRMED</span></div><p className="mt-1 text-sm text-muted-foreground">{date} • {room}</p></div><div className="flex items-center gap-3"><p className="font-bold">{amount}</p><Button variant="ghost" size="sm">View</Button></div></div>)}</CardContent></Card><Card><CardHeader><CardTitle>Property readiness</CardTitle></CardHeader><CardContent><div className="flex items-center justify-between"><p className="text-sm font-semibold">Profile completion</p><p className="font-black">86%</p></div><div className="mt-3 h-2 rounded-full bg-muted"><div className="h-full w-[86%] rounded-full bg-primary" /></div><div className="mt-5 space-y-3 text-sm">{[['Property profile',true],['Documents',true],['Rooms',true],['Photos',true],['Pricing',false],['Verification',false]].map(([label,done])=><div key={String(label)} className="flex items-center gap-2">{done?<CheckCircle2 className="size-4 text-primary"/>:<span className="size-4 rounded-full border"/>}<span>{label}</span></div>)}</div><Link href="/host/properties"><Button variant="outline" className="mt-5 w-full">Finish setup <ArrowUpRight className="size-4"/></Button></Link></CardContent></Card></div></PortalShell>}
+import { BookingStatusBadge } from '@/components/host/booking-status-badge'
+import { requireHost } from '@/lib/auth/session'
+import { createClient } from '@/lib/supabase/server'
+import { HostBookingService } from '@/features/bookings/host-booking.service'
+import { formatINR } from '@/lib/utils'
+
+export const dynamic = 'force-dynamic'
+
+export default async function HostDashboardPage() {
+  await requireHost()
+
+  const db = await createClient()
+  const service = new HostBookingService(db)
+  const hostProfileId = await service.getHostProfileId()
+
+  const stats = hostProfileId
+    ? await service.getDashboardStats(hostProfileId)
+    : {
+        todayCheckIns: 0,
+        todayCheckOuts: 0,
+        upcomingBookings: 0,
+        pendingRequests: 0,
+        monthRevenue: 0,
+        occupancyRate: 0,
+        recentBookings: [],
+      }
+
+  const today = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
+  return (
+    <PortalShell>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <p className="text-sm text-muted-foreground">{today}</p>
+          <h1 className="mt-1 text-3xl font-black">Host dashboard</h1>
+        </div>
+        <Link href="/host/calendar">
+          <Button>
+            <CalendarDays className="size-4" /> View calendar
+          </Button>
+        </Link>
+      </div>
+
+      {!hostProfileId ? (
+        <Card className="mt-6">
+          <CardContent className="p-8 text-center">
+            <p className="font-semibold">You are not set up as a host yet.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Complete your host profile to start receiving bookings.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">Today&apos;s check-ins</p>
+                <p className="mt-2 text-3xl font-black">{stats.todayCheckIns}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {stats.todayCheckOuts} check-out{stats.todayCheckOuts === 1 ? '' : 's'} today
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">Upcoming bookings</p>
+                <p className="mt-2 text-3xl font-black">{stats.upcomingBookings}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {stats.pendingRequests} pending request
+                  {stats.pendingRequests === 1 ? '' : 's'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">This month&apos;s revenue</p>
+                <p className="mt-2 flex items-center text-3xl font-black">
+                  <IndianRupee className="size-6" />
+                  {Math.round(stats.monthRevenue).toLocaleString('en-IN')}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">Confirmed + completed</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">Occupancy (next 30 days)</p>
+                <p className="mt-2 flex items-center text-3xl font-black">
+                  <Percent className="size-6" />
+                  {stats.occupancyRate}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">Across active rooms</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className="size-5 text-primary" /> Recent bookings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {stats.recentBookings.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <CheckCircle2 className="mx-auto size-8 text-muted-foreground" />
+                    <p className="mt-3 text-sm font-semibold">No bookings yet</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      New reservations will show up here.
+                    </p>
+                  </div>
+                ) : (
+                  stats.recentBookings.map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center"
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold">{b.guestName}</p>
+                          <BookingStatusBadge status={b.status} />
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {b.checkIn} → {b.checkOut} · {b.propertyName}
+                          {b.roomName ? ` · ${b.roomName}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-bold">{formatINR(b.totalAmount)}</p>
+                        <Link href="/host/bookings">
+                          <Button variant="outline" size="sm">
+                            View <ArrowUpRight className="size-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="size-5 text-primary" /> Quick actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Link href="/host/bookings" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    <ClipboardList className="size-4" /> Manage bookings
+                  </Button>
+                </Link>
+                <Link href="/host/calendar" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarDays className="size-4" /> Open calendar
+                  </Button>
+                </Link>
+                <Link href="/host/properties" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    <ArrowUpRight className="size-4" /> Manage properties
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+    </PortalShell>
+  )
+}

@@ -47,6 +47,12 @@ export function PaymentCheckout({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  function handleScriptError() {
+    setError(
+      'The payment provider could not be loaded. This usually means the Razorpay checkout script is blocked or the payment keys are not configured. Please try again later.'
+    )
+  }
+
   async function startPayment() {
     setError(null)
     setLoading(true)
@@ -102,7 +108,7 @@ export function PaymentCheckout({
 
   return (
     <div className="space-y-3">
-      <Script src={RAZORPAY_SRC} strategy="afterInteractive" onLoad={() => setReady(true)} />
+      <Script src={RAZORPAY_SRC} strategy="afterInteractive" onLoad={() => setReady(true)} onError={handleScriptError} />
       {error && <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
       <Button className="w-full" disabled={!ready || loading} onClick={startPayment}>
         {loading ? <><Loader2 className="size-4 animate-spin" /> Processing payment…</> : <><CreditCard className="size-4" /> Pay {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)}</>}

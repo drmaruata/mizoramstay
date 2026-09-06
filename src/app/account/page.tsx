@@ -2,13 +2,40 @@ import Link from 'next/link'
 import { ArrowRight, Heart, LogOut, Plane, ShieldCheck, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { BookingStatusBadge } from '@/components/host/booking-status-badge'
 import { requireUser } from '@/lib/auth/session'
+import { createClient } from '@/lib/supabase/server'
+import { formatINR } from '@/lib/utils'
 import { signOut } from '@/app/(auth)/signout/actions'
+
+/** Row shape returned by the account bookings query (embedded property name). */
+interface AccountBookingRow {
+  id: string
+  booking_reference: string
+  check_in: string
+  check_out: string
+  guests: number
+  total_amount: number | null
+  status: string
+  created_at: string
+  properties?: { name: string } | null
+}
 
 export default async function AccountPage() {
   const user = await requireUser()
   const dashboardHref = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? '/admin' : user.role === 'HOST' ? '/host/dashboard' : '/account'
   const roleLabel = user.role === 'HOST' ? 'Host account' : user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'Admin account' : 'Traveller account'
+
+  const db = await createClient()
+  const { data: bookings } = (await db
+    .from('bookings')
+    .select(
+      'id, booking_reference, check_in, check_out, guests, total_amount, status, created_at, properties:property_id(name)'
+    )
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })) as unknown as {
+    data: AccountBookingRow[] | null
+  }
 
   return (
     <main className="min-h-screen bg-[#f7f3eb]">
@@ -26,7 +53,39 @@ export default async function AccountPage() {
         </div>
 
         <div className="mt-8 grid gap-5 md:grid-cols-2">
-          <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Plane className="size-5 text-primary" /> Trips</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Your upcoming and completed stays will appear here.</p><Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4" /></Button></Link></CardContent></Card>
+          <Card className="border-[#ddd8cc] shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-[#17332e]"><Plane className="size-5 text-primary" /> Trips</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {bookings && bookings.length > 0 ? (
+                <div className="divide-y">
+                  {bookings.map((b) => (
+                    <Link key={b.id} href={`/booking/${b.id}`} className="block py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[#17332e]">{b.properties?.name ?? 'Stay'}</p>
+                          <p className="text-xs text-muted-foreground">{b.booking_reference}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {b.check_in} → {b.check_out} · {b.guests} guest{b.guests === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="font-bold text-[#17332e]">{formatINR(Number(b.total_amount))}</p>
+                          <BookingStatusBadge status={b.status} />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm leading-6 text-muted-foreground">Your upcoming and completed stays will appear here.</p>
+                  <Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4" /></Button></Link>
+                </>
+              )}
+            </CardContent>
+          </Card>
           <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Heart className="size-5 text-primary" /> Wishlist</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Saved properties are linked to your authenticated user record.</p><Link href="/stays"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Browse stays <ArrowRight className="size-4" /></Button></Link></CardContent></Card>
           <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><Star className="size-5 text-primary" /> Reviews</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Only completed bookings can create verified reviews.</p></CardContent></Card>
           <Card className="border-[#ddd8cc] shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-[#17332e]"><ShieldCheck className="size-5 text-primary" /> Account & security</CardTitle></CardHeader><CardContent><p className="text-sm leading-6 text-muted-foreground">Your session is managed securely through Supabase Auth.</p><Link href="/"><Button variant="outline" className="mt-4 rounded-xl border-[#cfc9bc] bg-white">Back to homepage <ArrowRight className="size-4" /></Button></Link></CardContent></Card>

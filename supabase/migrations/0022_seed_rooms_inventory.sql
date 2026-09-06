@@ -1,15 +1,9 @@
-insert into public.amenities(name, category) values
-('Wi-Fi','Connectivity'),('Breakfast','Food'),('Parking','Property'),('Hot water','Bathroom'),('Garden','Outdoor'),('Mountain view','View'),('Generator','Power'),('Family room','Room')
-on conflict(name) do nothing;
+-- 0022_seed_rooms_inventory.sql
+-- Backfill rooms, rolling inventory and amenity links for PUBLISHED
+-- properties so the transactional booking flow can be exercised end-to-end.
+-- Idempotent: safe to re-run (guarded by not-exists checks).
 
-insert into public.destinations(name, slug, district, short_description, description, latitude, longitude) values
-('Aizawl','aizawl','Aizawl','Mizoram’s urban gateway, food, views and local culture.','Gateway destination for city stays, local food and access to surrounding attractions.',23.7271,92.7176),
-('Reiek','reiek','Aizawl','Mountain scenery, village atmosphere and a classic day trip.','A mountain destination suited to short nature and culture-focused stays.',23.6833,92.6167),
-('Champhai','champhai','Champhai','Rolling landscapes, culture and border-region travel.','A destination for landscapes, culture and longer regional trips.',23.4561,93.3287),
-('Thenzawl','thenzawl','Serchhip','Nature-focused travel around waterfalls and forested hills.','A nature-oriented destination with attractions around forested hills.',23.3000,92.9500)
-on conflict(slug) do nothing;
-
--- Rooms for every published property (idempotent; mirrors migration 0022).
+-- 1. Rooms for every published property (guarded by property_id + name).
 insert into public.rooms (property_id, name, description, room_type, max_guests, beds, bathroom_type, base_price, status)
 select p.id, r.name, r.description, r.room_type, r.max_guests, r.beds, r.bathroom_type, r.base_price, 'ACTIVE'
 from public.properties p
@@ -23,7 +17,7 @@ where p.status = 'PUBLISHED'
     where existing.property_id = p.id and existing.name = r.name
   );
 
--- Rolling 90-day inventory for every active room (idempotent).
+-- 2. Rolling 90-day inventory for every active room (guarded by room_id + date).
 insert into public.room_inventory (room_id, date, available_units, blocked_units)
 select r.id, d.day, 1, 0
 from public.rooms r
@@ -34,7 +28,7 @@ where r.status = 'ACTIVE'
     where existing.room_id = r.id and existing.date = d.day
   );
 
--- Standard amenity links for every published property (idempotent).
+-- 3. Standard amenity links for every published property (guarded by pair).
 insert into public.property_amenities (property_id, amenity_id)
 select p.id, a.id
 from public.properties p
