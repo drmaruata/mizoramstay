@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createRazorpayOrder } from '@/lib/payments/razorpay'
 
 export async function POST(request: Request) {
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: { code: 'INVALID_AMOUNT', message: 'Booking total is invalid.' } }, { status: 500 })
     }
 
-    const { data: existing } = await db
+    const admin = createAdminClient()
+    const { data: existing } = await admin
       .from('payments')
       .select('provider_order_id, amount, currency, status')
       .eq('booking_id', booking.id)
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
 
     const order = await createRazorpayOrder({ amountInSubunits, currency: booking.currency, receipt: booking.booking_reference })
 
-    const { error: paymentError } = await db.from('payments').insert({
+    const { error: paymentError } = await admin.from('payments').insert({
       booking_id: booking.id,
       provider: 'RAZORPAY',
       provider_order_id: order.id,
