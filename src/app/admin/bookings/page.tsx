@@ -1,148 +1,26 @@
-import { CalendarCheck } from "lucide-react";
-import { requireAdmin } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
-import { single } from "@/lib/supabase/relations";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { CalendarCheck, ChevronRight, Users } from 'lucide-react'
+import { requireAdmin } from '@/lib/auth/session'
+import { createClient } from '@/lib/supabase/server'
+import { single } from '@/lib/supabase/relations'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 
-export const metadata = {
-  title: "Bookings | Admin",
-};
+export const metadata = { title: 'Bookings | Admin' }
 
 export default async function AdminBookingsPage() {
-  await requireAdmin();
-  const supabase = await createClient();
-
-  const { data: bookings, count } = await supabase
-    .from("bookings")
-    .select(
-      `
-      id,
-      booking_reference,
-      check_in,
-      check_out,
-      guests,
-      total_amount,
-      status,
-      created_at,
-      properties ( name, district ),
-      profiles ( first_name, last_name, email )
-      `,
-      { count: "exact" }
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const statusColors: Record<string, string> = {
-    PENDING: "bg-amber-50 text-amber-700",
-    CONFIRMED: "bg-green-50 text-green-700",
-    CANCELLED: "bg-red-50 text-red-700",
-    COMPLETED: "bg-blue-50 text-blue-700",
-    NO_SHOW: "bg-gray-100 text-gray-700",
-    REFUND_PENDING: "bg-orange-50 text-orange-700",
-    REFUNDED: "bg-purple-50 text-purple-700",
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-[.18em] text-primary">
-          Bookings
-        </p>
-        <h1 className="font-display mt-2 text-3xl">All bookings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {count ?? 0} bookings total
-        </p>
-      </div>
-
-      {bookings && bookings.length > 0 ? (
-        <div className="overflow-x-auto border border-border bg-background">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-border bg-muted">
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Reference</TableHead>
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Guest</TableHead>
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Property</TableHead>
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Dates</TableHead>
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Guests</TableHead>
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Total</TableHead>
-                <TableHead className="px-5 py-3 font-semibold text-foreground">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bookings.map((booking) => {
-                const profile = single<{
-                  first_name: string | null;
-                  last_name: string | null;
-                  email: string | null;
-                }>(booking.profiles);
-                const property = single<{
-                  name: string | null;
-                  district: string | null;
-                }>(booking.properties);
-                return (
-                  <TableRow key={booking.id} className="hover:bg-accent">
-                    <TableCell className="px-5 py-4 font-medium text-primary">
-                      {booking.booking_reference}
-                    </TableCell>
-                    <TableCell className="px-5 py-4">
-                      <p className="font-medium text-foreground">
-                        {[profile?.first_name, profile?.last_name]
-                          .filter(Boolean)
-                          .join(" ") || "Guest"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {profile?.email ?? ""}
-                      </p>
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-muted-foreground">
-                      {property?.name ?? "—"}
-                      {property?.district
-                        ? ` (${property.district})`
-                        : ""}
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-muted-foreground">
-                      {new Date(booking.check_in).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                      })}{" "}
-                      →{" "}
-                      {new Date(booking.check_out).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </TableCell>
-                    <TableCell className="px-5 py-4 text-muted-foreground">{booking.guests}</TableCell>
-                    <TableCell className="px-5 py-4 font-semibold text-foreground">
-                      ₹{Number(booking.total_amount).toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell className="px-5 py-4">
-                      <Badge variant="secondary">
-                        {booking.status.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="border border-dashed border-border bg-background p-12 text-center">
-          <CalendarCheck className="mx-auto h-10 w-10 text-muted-foreground" />
-          <p className="mt-3 font-medium text-foreground">No bookings yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Bookings will appear here once guests start booking.
-          </p>
-        </div>
-      )}
-    </div>
-  );
+  await requireAdmin()
+  const supabase = await createClient()
+  const { data: bookings, count } = await supabase.from('bookings').select('id, booking_reference, check_in, check_out, guests, total_amount, status, created_at, properties(name, district), profiles(first_name, last_name, email)', { count: 'exact' }).order('created_at', { ascending: false }).limit(50)
+  const confirmed = (bookings ?? []).filter((booking) => ['CONFIRMED', 'COMPLETED'].includes(booking.status))
+  const gmv = confirmed.reduce((sum, booking) => sum + Number(booking.total_amount ?? 0), 0)
+  const statusTone: Record<string, string> = { PENDING: 'bg-[#fbefd9] text-[#95651c]', CONFIRMED: 'bg-[#e7f1ea] text-[#1d6048]', CANCELLED: 'bg-[#f8e8e6] text-[#9c4b45]', COMPLETED: 'bg-[#e8eef6] text-[#405d77]', NO_SHOW: 'bg-[#eceeec] text-[#64746d]', REFUND_PENDING: 'bg-[#f9eadb] text-[#9a6025]', REFUNDED: 'bg-[#eee7f4] text-[#6c547b]' }
+  return <div className="mx-auto max-w-[1240px] space-y-6">
+    <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#778780]">Transaction operations</p><h1 className="mt-2 text-3xl font-black tracking-tight">Bookings</h1><p className="mt-2 text-sm text-muted-foreground">Review every reservation, payment state and guest journey.</p></div>
+    <div className="grid gap-4 sm:grid-cols-3"><Stat icon={CalendarCheck} label="Total bookings" value={count ?? 0} /><Stat icon={Users} label="Confirmed" value={confirmed.length} /><Stat icon={CalendarCheck} label="Confirmed GMV" value={`₹${gmv.toLocaleString('en-IN')}`} /></div>
+    <div className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-black/5 bg-[#fafbf9] px-5 py-4"><div><p className="text-base font-black">Recent bookings</p><p className="mt-1 text-xs text-muted-foreground">Newest reservations first.</p></div><Badge variant="secondary">{count ?? 0} records</Badge></div><div className="overflow-x-auto"><Table><TableHeader><TableRow className="border-b border-black/5"><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Reference</TableHead><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Guest</TableHead><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Property</TableHead><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Dates</TableHead><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Guests</TableHead><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Total</TableHead><TableHead className="px-5 py-3 text-[10px] font-bold uppercase tracking-[.12em]">Status</TableHead></TableRow></TableHeader><TableBody>{bookings?.map((booking) => { const profile = single<{ first_name: string | null; last_name: string | null; email: string | null }>(booking.profiles); const property = single<{ name: string | null; district: string | null }>(booking.properties); const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Guest'; return <TableRow key={booking.id} className="hover:bg-[#fafbf9]"><TableCell className="px-5 py-4 font-bold text-[#1d5b47]">{booking.booking_reference}</TableCell><TableCell className="px-5 py-4"><p className="font-bold">{name}</p><p className="mt-1 text-[10px] text-muted-foreground">{profile?.email ?? ''}</p></TableCell><TableCell className="px-5 py-4 text-xs text-muted-foreground"><p className="font-semibold text-[#425950]">{property?.name ?? '—'}</p><p className="mt-1">{property?.district ?? ''}</p></TableCell><TableCell className="px-5 py-4 text-xs text-muted-foreground">{new Date(booking.check_in).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → {new Date(booking.check_out).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</TableCell><TableCell className="px-5 py-4 text-xs text-muted-foreground">{booking.guests}</TableCell><TableCell className="px-5 py-4 font-black">₹{Number(booking.total_amount).toLocaleString('en-IN')}</TableCell><TableCell className="px-5 py-4"><Badge className={`border-0 text-[9px] uppercase ${statusTone[booking.status] ?? 'bg-muted text-muted-foreground'}`}>{booking.status.replace(/_/g, ' ')}</Badge></TableCell></TableRow> })}</TableBody></Table></div>{(!bookings || !bookings.length) && <div className="p-12 text-center"><CalendarCheck className="mx-auto size-10 text-muted-foreground" /><p className="mt-3 font-bold">No bookings yet</p><p className="mt-1 text-sm text-muted-foreground">Bookings will appear here once guests start booking.</p></div>}</div>
+    <div className="flex items-center gap-2 text-xs text-muted-foreground"><ChevronRight className="size-4" /> Booking confirmation, payment state and inventory remain server-controlled.</div>
+  </div>
 }
+
+function Stat({ icon: Icon, label, value }: { icon: typeof CalendarCheck; label: string; value: number | string }) { return <Card className="border-black/5 shadow-sm"><CardContent className="p-5"><Icon className="size-5 text-[#5b756c]" /><p className="mt-4 text-xs font-bold uppercase tracking-[.15em] text-[#7b8a84]">{label}</p><p className="mt-2 text-2xl font-black">{value}</p></CardContent></Card> }
