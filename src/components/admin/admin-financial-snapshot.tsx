@@ -1,0 +1,19 @@
+import Link from 'next/link'
+import { ArrowRight, Banknote, CreditCard, WalletCards } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatINR } from '@/lib/utils'
+
+export async function AdminFinancialSnapshot(){
+  const db=await createClient()
+  const [{data:payments},{data:payouts}]=await Promise.all([
+    db.from('payments').select('amount,status').order('created_at',{ascending:false}).limit(500),
+    db.from('host_payouts').select('gross_amount,platform_commission,net_amount,status').order('created_at',{ascending:false}).limit(500),
+  ])
+  const captured=(payments??[]).filter(p=>p.status==='CAPTURED').reduce((s,p)=>s+Number(p.amount??0),0)
+  const failedPayments=(payments??[]).filter(p=>p.status==='FAILED').length
+  const platformRevenue=(payouts??[]).reduce((s,p)=>s+Number(p.platform_commission??0),0)
+  const outstanding=(payouts??[]).filter(p=>['PENDING','SCHEDULED','PROCESSING'].includes(p.status)).reduce((s,p)=>s+Number(p.net_amount??0),0)
+  const paid=(payouts??[]).filter(p=>p.status==='PAID').reduce((s,p)=>s+Number(p.net_amount??0),0)
+  return <section className="space-y-4"><div className="flex items-end justify-between gap-3"><div><p className="text-[9px] font-bold uppercase tracking-[.18em] text-[#8a9892]">Financial operations</p><h2 className="mt-1 text-xl font-black tracking-tight">Payments & settlements</h2></div><Link href="/admin/payments" className="inline-flex items-center gap-1 text-xs font-bold text-[#1c5b46]">Open payments <ArrowRight className="size-3.5"/></Link></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Card className="border-black/5"><CardContent className="p-5"><div className="flex items-center justify-between"><span className="rounded-xl bg-[#e9eef5] p-2 text-[#3d5871]"><CreditCard className="size-4"/></span><span className="text-[9px] font-bold uppercase tracking-wide text-[#84918b]">Captured</span></div><p className="mt-4 text-2xl font-black">{formatINR(Math.round(captured))}</p><p className="mt-1 text-xs text-muted-foreground">Customer payments received</p></CardContent></Card><Card className="border-black/5"><CardContent className="p-5"><div className="flex items-center justify-between"><span className="rounded-xl bg-[#e8efe9] p-2 text-[#1b5d47]"><Banknote className="size-4"/></span><span className="text-[9px] font-bold uppercase tracking-wide text-[#84918b]">Commission</span></div><p className="mt-4 text-2xl font-black">{formatINR(Math.round(platformRevenue))}</p><p className="mt-1 text-xs text-muted-foreground">Recorded platform revenue</p></CardContent></Card><Card className="border-black/5"><CardContent className="p-5"><div className="flex items-center justify-between"><span className="rounded-xl bg-[#fbefd9] p-2 text-[#9a651e]"><WalletCards className="size-4"/></span><span className="text-[9px] font-bold uppercase tracking-wide text-[#84918b]">Outstanding</span></div><p className="mt-4 text-2xl font-black">{formatINR(Math.round(outstanding))}</p><p className="mt-1 text-xs text-muted-foreground">Host payouts not yet settled</p></CardContent></Card><Card className="border-black/5"><CardContent className="p-5"><div className="flex items-center justify-between"><span className="rounded-xl bg-[#eeeaf5] p-2 text-[#635075]"><WalletCards className="size-4"/></span><span className="text-[9px] font-bold uppercase tracking-wide text-[#84918b]">Settled</span></div><p className="mt-4 text-2xl font-black">{formatINR(Math.round(paid))}</p><p className="mt-1 text-xs text-muted-foreground">Paid to hosts</p></CardContent></Card></div><div className="flex flex-wrap gap-3 text-xs text-[#74837d]"><span>Payment records: {payments?.length??0}</span><span>Failed payments: {failedPayments}</span><span>Payout records: {payouts?.length??0}</span></div></section>
+}
