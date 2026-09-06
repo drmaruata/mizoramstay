@@ -153,7 +153,9 @@ begin
 end;
 $$;
 
-revoke all on function public.create_booking_transaction(uuid, uuid, date, date, smallint, smallint, text, text, text, text, text, integer) from public;
+-- Supabase default privileges grant EXECUTE directly to anon/authenticated/service_role,
+-- so revoking from PUBLIC alone is ineffective. Revoke explicitly from anon.
+revoke all on function public.create_booking_transaction(uuid, uuid, date, date, smallint, smallint, text, text, text, text, text, integer) from public, anon;
 grant execute on function public.create_booking_transaction(uuid, uuid, date, date, smallint, smallint, text, text, text, text, text, integer) to authenticated;
 
 create or replace function public.release_expired_booking_holds()
@@ -195,7 +197,7 @@ begin
 end;
 $$;
 
-revoke all on function public.release_expired_booking_holds() from public;
+revoke all on function public.release_expired_booking_holds() from public, anon, authenticated;
 grant execute on function public.release_expired_booking_holds() to service_role;
 
 create or replace function public.cancel_booking_transaction(p_booking_id uuid, p_reason text default null)
@@ -240,5 +242,5 @@ begin
 end;
 $$;
 
-revoke all on function public.cancel_booking_transaction(uuid, text) from public;
+revoke all on function public.cancel_booking_transaction(uuid, text) from public, anon;
 grant execute on function public.cancel_booking_transaction(uuid, text) to authenticated;
