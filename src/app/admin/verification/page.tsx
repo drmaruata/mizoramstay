@@ -4,6 +4,28 @@ import { VerificationConsole, type VerificationProperty } from './VerificationCo
 
 export const dynamic = 'force-dynamic'
 
+type VerificationCaseRow = {
+  id: string
+  property_id: string
+  verification_type: string
+  risk_level: string
+  status: string
+  submitted_at: string
+  assigned_to: string | null
+  notes: string | null
+}
+
+type VerificationEventRow = {
+  id: string
+  case_id: string
+  action: string
+  old_status: string | null
+  new_status: string | null
+  notes: string | null
+  created_at: string
+  actor_id: string | null
+}
+
 export default async function AdminVerificationPage() {
   await requireAdmin()
   const db = createAdminClient()
@@ -32,10 +54,10 @@ export default async function AdminVerificationPage() {
   const [{ data: cases }, { data: events }] = await Promise.all([
     propertyIds.length
       ? db.from('verification_cases').select('id, property_id, verification_type, risk_level, status, submitted_at, assigned_to, notes').in('property_id', propertyIds).order('submitted_at', { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
+      : Promise.resolve({ data: [] as VerificationCaseRow[], error: null }),
     propertyIds.length
       ? db.from('verification_events').select('id, case_id, action, old_status, new_status, notes, created_at, actor_id').order('created_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
+      : Promise.resolve({ data: [] as VerificationEventRow[], error: null }),
   ])
 
   const actorIds = [...new Set((events ?? []).map((event) => event.actor_id).filter(Boolean))] as string[]
@@ -44,15 +66,15 @@ export default async function AdminVerificationPage() {
     : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> }
 
   const actorNames = new Map((actors ?? []).map((actor) => [actor.id, [actor.first_name, actor.last_name].filter(Boolean).join(' ') || actor.email || 'Admin']))
-  const casesByProperty = new Map<string, NonNullable<typeof cases>>()
-  for (const item of cases ?? []) {
+  const casesByProperty = new Map<string, VerificationCaseRow[]>()
+  for (const item of (cases ?? []) as VerificationCaseRow[]) {
     const current = casesByProperty.get(item.property_id) ?? []
     current.push(item)
     casesByProperty.set(item.property_id, current)
   }
 
-  const eventsByCase = new Map<string, NonNullable<typeof events>>()
-  for (const item of events ?? []) {
+  const eventsByCase = new Map<string, VerificationEventRow[]>()
+  for (const item of (events ?? []) as VerificationEventRow[]) {
     const current = eventsByCase.get(item.case_id) ?? []
     current.push(item)
     eventsByCase.set(item.case_id, current)
@@ -73,15 +95,17 @@ export default async function AdminVerificationPage() {
       notes: item.notes,
     }))
     const caseIds = new Set(propertyCases.map((item) => item.id))
-    const propertyEvents = (events ?? []).filter((item) => caseIds.has(item.case_id)).map((item) => ({
-      id: item.id,
-      action: item.action,
-      oldStatus: item.old_status,
-      newStatus: item.new_status,
-      notes: item.notes,
-      createdAt: item.created_at,
-      actorName: item.actor_id ? actorNames.get(item.actor_id) ?? null : null,
-    }))
+    const propertyEvents = (events ?? [])
+      .filter((item) => caseIds.has(item.case_id))
+      .map((item) => ({
+        id: item.id,
+        action: item.action,
+        oldStatus: item.old_status,
+        newStatus: item.new_status,
+        notes: item.notes,
+        createdAt: item.created_at,
+        actorName: item.actor_id ? actorNames.get(item.actor_id) ?? null : null,
+      }))
     return {
       id: property.id,
       name: property.name,
