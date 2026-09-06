@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { HostPropertyService, hostPropertySchema } from './host.service'
 
@@ -12,7 +11,8 @@ async function getService() {
 
 /**
  * Create a new property for the signed-in host.
- * Redirects to the property edit page on success.
+ * Media is uploaded from the host browser after the property/rooms exist so
+ * large image files never pass through a server action payload.
  */
 export async function createHostProperty(input: unknown) {
   const parsed = hostPropertySchema.safeParse(input)
@@ -27,10 +27,9 @@ export async function createHostProperty(input: unknown) {
   }
 
   try {
-    const { id, slug } = await service.createProperty(hostProfileId, parsed.data)
+    const result = await service.createProperty(hostProfileId, parsed.data)
     revalidatePath('/host/properties')
-    redirect(`/host/properties/${slug}`)
-    return { ok: true as const, id, slug }
+    return { ok: true as const, ...result }
   } catch (err) {
     console.error('[createHostProperty]', err)
     return { ok: false as const, error: err instanceof Error ? err.message : 'Failed to create property.' }
@@ -53,10 +52,10 @@ export async function updateHostProperty(propertyId: string, input: unknown) {
   }
 
   try {
-    const { id, slug } = await service.updateProperty(propertyId, parsed.data)
+    const result = await service.updateProperty(propertyId, parsed.data)
     revalidatePath('/host/properties')
-    revalidatePath(`/host/properties/${slug}`)
-    return { ok: true as const, id, slug }
+    revalidatePath(`/host/properties/${result.slug}`)
+    return { ok: true as const, ...result }
   } catch (err) {
     console.error('[updateHostProperty]', err)
     return { ok: false as const, error: err instanceof Error ? err.message : 'Failed to update property.' }
