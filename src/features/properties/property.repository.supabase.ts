@@ -134,7 +134,7 @@ export class SupabasePropertyRepository implements PropertyRepository<Property> 
         isHero: Boolean(mediaRow.is_hero),
         roomId: mediaRow.room_id ?? null,
       }))
-      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .sort((a: PropertyMedia, b: PropertyMedia) => a.sortOrder - b.sortOrder)
 
     const rooms: Room[] = (row.rooms ?? []).map((roomRow: any) => ({
       id: roomRow.id,
