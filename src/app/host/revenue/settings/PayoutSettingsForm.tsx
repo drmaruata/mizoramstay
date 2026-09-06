@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { Building2, CheckCircle2, Landmark, ShieldCheck } from 'lucide-react'
+import { Building2, CheckCircle2, CircleAlert, Landmark, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { saveHostPayoutSettings, type PayoutSettingsState } from './actions'
@@ -17,6 +17,10 @@ type Props = {
     ifscCode: string | null
     autoPayout: boolean
     payoutDelayDays: number
+    validationStatus: string | null
+    validationUtr: string | null
+    failureReason: string | null
+    lastVerifiedAt: string | null
   }
 }
 
@@ -34,8 +38,22 @@ export function PayoutSettingsForm({ settings }: Props) {
               <span className="grid size-11 place-items-center rounded-2xl bg-[#e7f1ea] text-[#155b45]"><Landmark className="size-5" /></span>
               <div><p className="text-sm font-black text-[#17332e]">Bank account</p><p className="mt-1 text-xs leading-5 text-[#6c7d75]">Your bank details are sent to RazorpayX for account validation. MizoramStay stores only the last four digits and provider identifiers.</p></div>
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${configured ? 'bg-[#e6f2ea] text-[#21684e]' : 'bg-[#fbefd9] text-[#94621b]'}`}>{statusLabel}</span>
+            <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${configured ? 'bg-[#e6f2ea] text-[#21684e]' : settings.status === 'ACTION_REQUIRED' ? 'bg-red-50 text-red-700' : 'bg-[#fbefd9] text-[#94621b]'}`}>{statusLabel}</span>
           </div>
+
+          {settings.status === 'ACTION_REQUIRED' && settings.failureReason ? (
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-800">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" />
+              <div><p className="text-sm font-bold">Bank validation needs attention</p><p className="mt-1 text-xs leading-5">{settings.failureReason}</p></div>
+            </div>
+          ) : null}
+
+          {settings.status === 'UNDER_REVIEW' ? (
+            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#eadfbe] bg-[#fffaf0] p-4 text-[#7b5a1f]">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" />
+              <div><p className="text-sm font-bold">Validation is still in progress</p><p className="mt-1 text-xs leading-5">RazorpayX has accepted the validation request. The payout account will remain blocked until the provider confirms it.</p>{settings.validationUtr ? <p className="mt-1 text-[11px] font-semibold">Validation UTR: {settings.validationUtr}</p> : null}</div>
+            </div>
+          ) : null}
 
           {configured && settings.bankAccountLast4 ? (
             <div className="mt-5 flex items-center justify-between rounded-2xl border border-[#dfe7e2] bg-[#f8faf8] p-4">
