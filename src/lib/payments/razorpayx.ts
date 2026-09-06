@@ -97,6 +97,10 @@ export async function validateHostBankAccount(input: {
   })
 }
 
+export async function fetchRazorpayXValidation(validationId: string) {
+  return razorpayXFetch<RazorpayXValidation>(`/fund_accounts/validations/${encodeURIComponent(validationId)}`)
+}
+
 export async function fetchRazorpayXPayout(payoutId: string) {
   return razorpayXFetch<RazorpayXPayout>(`/payouts/${encodeURIComponent(payoutId)}`)
 }
