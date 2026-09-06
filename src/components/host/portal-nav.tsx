@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, CalendarDays, ClipboardList, Home, MessageSquare, Settings, Wallet, LogOut } from 'lucide-react'
+import { BarChart3, CalendarDays, ClipboardList, Home, MessageSquare, MoreHorizontal, Settings, Wallet } from 'lucide-react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { ExitPortalButton } from '@/components/host/exit-portal-button'
 
 const items = [
   { href: '/host/dashboard', label: 'Overview', icon: BarChart3 },
@@ -14,30 +16,101 @@ const items = [
   { href: '/host/reviews', label: 'Reviews', icon: MessageSquare },
 ] as const
 
-export function PortalNav({ mobile = false }: { mobile?: boolean }) {
+const primaryMobileItems = items.slice(0, 4)
+const secondaryMobileItems = items.slice(4)
+
+function NavLink({
+  href,
+  label,
+  Icon,
+  mobile = false,
+}: {
+  href: string
+  label: string
+  Icon: typeof BarChart3
+  mobile?: boolean
+}) {
   const pathname = usePathname()
+  const active = pathname === href || pathname.startsWith(`${href}/`)
+
   return (
-    <nav className={cn(mobile ? 'grid grid-cols-4 gap-1' : 'space-y-1')} aria-label="Host navigation">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`)
-        return (
-          <Link key={href} href={href} className={cn(
-            mobile
-              ? 'flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-[10px] font-semibold'
-              : 'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition',
-            active ? 'bg-white text-[#154637] shadow-sm ring-1 ring-black/5' : 'text-[#5e726b] hover:bg-white/70 hover:text-[#154637]'
-          )} aria-current={active ? 'page' : undefined}>
-            <Icon className={cn(mobile ? 'size-5' : 'size-4', active && 'text-[#d4942f]')} />
-            <span>{label}</span>
-          </Link>
-        )
-      })}
-      {mobile && (
-        <Link href="/" className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl px-2 text-[10px] font-semibold text-[#5e726b]">
-          <LogOut className="size-5" />
-          <span>Exit</span>
-        </Link>
+    <Link
+      href={href}
+      className={cn(
+        mobile
+          ? 'flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition'
+          : 'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition',
+        active
+          ? 'bg-white text-[#154637] shadow-sm ring-1 ring-black/5'
+          : 'text-[#5e726b] hover:bg-white/75 hover:text-[#154637]'
       )}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Icon className={cn(mobile ? 'size-[19px]' : 'size-4', active && 'text-[#d4942f]')} />
+      <span>{label}</span>
+    </Link>
+  )
+}
+
+export function PortalNav({ mobile = false }: { mobile?: boolean }) {
+  const [moreOpen, setMoreOpen] = useState(false)
+  const pathname = usePathname()
+  const moreActive = secondaryMobileItems.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
+
+  if (mobile) {
+    return (
+      <div className="relative">
+        {moreOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Close more menu"
+              className="fixed inset-0 z-[-1] bg-black/5"
+              onClick={() => setMoreOpen(false)}
+            />
+            <div className="absolute bottom-[calc(100%+10px)] right-1 w-56 rounded-3xl border border-[#d9e1dc] bg-[#fbf9f4] p-2 shadow-[0_18px_55px_rgba(21,70,55,.16)]">
+              <p className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#93a099]">More in your studio</p>
+              <div className="space-y-1">
+                {secondaryMobileItems.map(({ href, label, icon: Icon }) => (
+                  <NavLink key={href} href={href} label={label} Icon={Icon} />
+                ))}
+                <div className="border-t border-[#e0e5df] pt-1">
+                  <ExitPortalButton />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <nav className="grid grid-cols-5 gap-1" aria-label="Host navigation">
+          {primaryMobileItems.map(({ href, label, icon: Icon }) => (
+            <NavLink key={href} href={href} label={label} Icon={Icon} mobile />
+          ))}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((value) => !value)}
+            className={cn(
+              'flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-semibold transition',
+              moreOpen || moreActive
+                ? 'bg-white text-[#154637] shadow-sm ring-1 ring-black/5'
+                : 'text-[#5e726b] hover:bg-white/75 hover:text-[#154637]'
+            )}
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+          >
+            <MoreHorizontal className={cn('size-[19px]', (moreOpen || moreActive) && 'text-[#d4942f]')} />
+            <span>More</span>
+          </button>
+        </nav>
+      </div>
+    )
+  }
+
+  return (
+    <nav className="space-y-1" aria-label="Host navigation">
+      {items.map(({ href, label, icon: Icon }) => (
+        <NavLink key={href} href={href} label={label} Icon={Icon} />
+      ))}
     </nav>
   )
 }
@@ -45,12 +118,15 @@ export function PortalNav({ mobile = false }: { mobile?: boolean }) {
 export function HostUtilityNav() {
   return (
     <div className="mt-6 border-t border-[#d9e1dc] pt-5">
-      <Link href="#" className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-[#6b7b75] hover:bg-white/70">
+      <Link
+        href="#"
+        className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-[#6b7b75] transition hover:bg-white/70 hover:text-[#154637]"
+      >
         <Settings className="size-4" /> Settings
       </Link>
-      <Link href="/" className="mt-1 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-[#6b7b75] hover:bg-white/70">
-        <LogOut className="size-4" /> Exit portal
-      </Link>
+      <div className="mt-1">
+        <ExitPortalButton />
+      </div>
     </div>
   )
 }
