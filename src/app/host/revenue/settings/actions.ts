@@ -15,7 +15,7 @@ export async function saveHostPayoutSettings(_previous: PayoutSettingsState, for
     const hostId = await service.getHostProfileId()
     if (!hostId) throw new Error('Host account could not be resolved.')
 
-    await service.saveSettings(hostId, {
+    const settings = await service.saveSettings(hostId, {
       beneficiaryName: String(formData.get('beneficiaryName') ?? ''),
       bankName: String(formData.get('bankName') ?? ''),
       accountNumber: String(formData.get('accountNumber') ?? ''),
@@ -26,7 +26,25 @@ export async function saveHostPayoutSettings(_previous: PayoutSettingsState, for
 
     revalidatePath('/host/revenue')
     revalidatePath('/host/revenue/settings')
-    return { ok: true, message: 'Payout account submitted for validation.' }
+
+    if (settings.status === 'ACTIVE') {
+      return { ok: true, message: 'Bank account verified successfully. Payouts can use this account.' }
+    }
+
+    if (settings.status === 'UNDER_REVIEW') {
+      return { ok: true, message: 'Bank account submitted. RazorpayX is still validating the account.' }
+    }
+
+    if (settings.status === 'ACTION_REQUIRED') {
+      return {
+        ok: false,
+        message: settings.failureReason
+          ? `Bank account validation failed: ${settings.failureReason}`
+          : 'Bank account validation requires action. Check the account details and submit again.',
+      }
+    }
+
+    return { ok: true, message: 'Bank account details were saved and are awaiting validation.' }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Unable to save payout settings.' }
   }
