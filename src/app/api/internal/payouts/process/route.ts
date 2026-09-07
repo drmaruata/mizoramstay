@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { HostPayoutService } from '@/features/payments/host-payout.service'
+import { HostSettlementService } from '@/features/payments/host-settlement.service'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,8 +10,8 @@ async function processPayouts(request: Request) {
   if (!expected || authorization !== `Bearer ${expected}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = createAdminClient()
-  const service = new HostPayoutService(db)
-  const results = await service.processDuePayouts()
+  const service = new HostSettlementService(db)
+  const results = await service.processDueSettlements()
   return NextResponse.json({ ok: true, results })
 }
 
