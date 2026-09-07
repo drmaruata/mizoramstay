@@ -59,15 +59,8 @@ export function SettingsPanel({ initial }: { initial?: Partial<AdminSettingsStat
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-[28px] border border-[#d9e2dd] bg-white p-5 shadow-[0_12px_36px_rgba(20,55,44,.05)] sm:flex-row sm:items-center sm:justify-between md:p-6">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#7c8c85]">Configuration control</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#183a31]">Platform settings</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Centralize the operational defaults used across bookings, verification and notifications.</p>
-        </div>
-        <Button onClick={save} disabled={pending || !dirty} className="bg-[#183a31] hover:bg-[#183a31]/90">
-          {pending ? <Save className="size-4 animate-pulse" /> : <Save className="size-4" />}
-          {pending ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
-        </Button>
+        <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#7c8c85]">Configuration control</p><h2 className="mt-1 text-2xl font-black tracking-tight text-[#183a31]">Platform settings</h2><p className="mt-1 text-sm text-muted-foreground">Centralize operational defaults for bookings, host settlements, verification and notifications.</p></div>
+        <Button onClick={save} disabled={pending || !dirty} className="bg-[#183a31] hover:bg-[#183a31]/90">{pending ? <Save className="size-4 animate-pulse" /> : <Save className="size-4" />}{pending ? 'Saving…' : saved ? 'Saved' : 'Save changes'}</Button>
       </div>
 
       {saved && <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"><CheckCircle2 className="mt-0.5 size-4 shrink-0" /> Settings saved to the platform configuration.</div>}
@@ -75,9 +68,9 @@ export function SettingsPanel({ initial }: { initial?: Partial<AdminSettingsStat
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-[28px] border border-[#d9e2dd] bg-white shadow-sm">
-          <div className="border-b border-[#edf1ee] px-5 py-4 md:px-6"><div className="flex items-center gap-3"><CreditCard className="size-5 text-[#2b7a5c]" /><div><h3 className="font-black">Marketplace economics</h3><p className="text-xs text-muted-foreground">Commercial defaults from the MVP operating model.</p></div></div></div>
+          <div className="border-b border-[#edf1ee] px-5 py-4 md:px-6"><div className="flex items-center gap-3"><CreditCard className="size-5 text-[#2b7a5c]" /><div><h3 className="font-black">Marketplace economics</h3><p className="text-xs text-muted-foreground">Host settlement commission is configurable within the launch range.</p></div></div></div>
           <div className="grid gap-4 p-5 md:grid-cols-2 md:p-6">
-            <label className="space-y-2 text-sm font-semibold">Platform commission (%)<Input type="number" min="0" max="30" step="0.5" value={state.commissionRate} onChange={(e) => update('commissionRate', Number(e.target.value))} /></label>
+            <label className="space-y-2 text-sm font-semibold">Platform commission (%)<Input type="number" min="5" max="10" step="0.5" value={state.commissionRate} onChange={(e) => update('commissionRate', Number(e.target.value))} /><span className="text-xs font-normal text-muted-foreground">Applied to future host earnings. Existing earning records retain their recorded rate.</span></label>
             <label className="space-y-2 text-sm font-semibold">Default currency<Input value={state.defaultCurrency} maxLength={3} onChange={(e) => update('defaultCurrency', e.target.value.toUpperCase())} /></label>
             <label className="space-y-2 text-sm font-semibold md:col-span-2">Booking hold duration (minutes)<Input type="number" min="1" max="60" value={state.defaultHoldMinutes} onChange={(e) => update('defaultHoldMinutes', Number(e.target.value))} /><span className="text-xs font-normal text-muted-foreground">The transactional booking flow enforces a 1–60 minute limit.</span></label>
           </div>
@@ -103,10 +96,19 @@ export function SettingsPanel({ initial }: { initial?: Partial<AdminSettingsStat
         </section>
 
         <section className="rounded-[28px] border border-[#d9e2dd] bg-white shadow-sm xl:col-span-2">
+          <div className="border-b border-[#edf1ee] px-5 py-4 md:px-6"><div className="flex items-center gap-3"><LockKeyhole className="size-5 text-[#2b7a5c]" /><div><h3 className="font-black">Settlement operations</h3><p className="text-xs text-muted-foreground">Automatic host transfers run on the 5th and 15th of every month.</p></div></div></div>
+          <div className="grid gap-3 p-5 md:grid-cols-3 md:p-6"><div className="rounded-2xl bg-[#f7f9f7] p-4"><CalendarIcon /><p className="mt-2 text-sm font-bold">5th & 15th</p><p className="mt-1 text-xs text-muted-foreground">Fixed settlement dates for eligible completed-stay earnings.</p></div><div className="rounded-2xl bg-[#f7f9f7] p-4"><CreditCard className="size-4 text-[#2b7a5c]" /><p className="mt-2 text-sm font-bold">5%–10% configurable</p><p className="mt-1 text-xs text-muted-foreground">The platform commission can be finalized later within this range.</p></div><div className="rounded-2xl bg-[#f7f9f7] p-4"><ShieldCheck className="size-4 text-[#2b7a5c]" /><p className="mt-2 text-sm font-bold">RazorpayX verification</p><p className="mt-1 text-xs text-muted-foreground">Only verified host fund accounts can receive automatic settlement.</p></div></div>
+        </section>
+
+        <section className="rounded-[28px] border border-[#d9e2dd] bg-white shadow-sm xl:col-span-2">
           <div className="border-b border-[#edf1ee] px-5 py-4 md:px-6"><div className="flex items-center gap-3"><LockKeyhole className="size-5 text-[#2b7a5c]" /><div><h3 className="font-black">Security baseline</h3><p className="text-xs text-muted-foreground">Administrative controls to validate before production launch.</p></div></div></div>
           <div className="grid gap-3 p-5 md:grid-cols-3 md:p-6"><div className="rounded-2xl bg-[#f7f9f7] p-4"><Settings2 className="size-4 text-[#2b7a5c]" /><p className="mt-2 text-sm font-bold">RBAC enforced</p><p className="mt-1 text-xs text-muted-foreground">Admin pages require ADMIN or SUPER_ADMIN.</p></div><div className="rounded-2xl bg-[#f7f9f7] p-4"><ShieldCheck className="size-4 text-[#2b7a5c]" /><p className="mt-2 text-sm font-bold">Audit-ready verification</p><p className="mt-1 text-xs text-muted-foreground">Verification decisions record the operator identity.</p></div><div className="rounded-2xl bg-[#f7f9f7] p-4"><LockKeyhole className="size-4 text-[#2b7a5c]" /><p className="mt-2 text-sm font-bold">Session controls</p><p className="mt-1 text-xs text-muted-foreground">Use MFA and session policy before production admin access.</p></div></div>
         </section>
       </div>
     </div>
   )
+}
+
+function CalendarIcon() {
+  return <div className="size-4 rounded border-2 border-[#2b7a5c]" aria-hidden="true" />
 }
