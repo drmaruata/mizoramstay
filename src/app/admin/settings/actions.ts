@@ -22,7 +22,7 @@ export async function updatePlatformSettings(input: AdminSettingsState): Promise
   const admin = await requireAdmin()
   const currency = input.defaultCurrency.trim().toUpperCase()
   if (currency.length !== 3) throw new Error('Currency must be a 3-letter ISO code.')
-  if (input.commissionRate < 0 || input.commissionRate > 30) throw new Error('Commission must be between 0% and 30%.')
+  if (input.commissionRate < 5 || input.commissionRate > 10) throw new Error('Host settlement commission must be between 5% and 10%.')
   if (input.defaultHoldMinutes < 1 || input.defaultHoldMinutes > 60) throw new Error('Booking hold must be between 1 and 60 minutes.')
   if (input.verificationSlaHours < 1) throw new Error('Verification SLA must be at least 1 hour.')
 
@@ -46,14 +46,7 @@ export async function updatePlatformSettings(input: AdminSettingsState): Promise
   const { data, error } = await db.from('platform_settings').upsert(payload, { onConflict: 'id' }).select('*').single()
   if (error || !data) throw new Error(error?.message ?? 'Unable to save platform settings.')
 
-  await db.from('audit_logs').insert({
-    actor_identity: admin.id,
-    entity_type: 'platform_settings',
-    entity_id: admin.id,
-    action: 'UPDATED',
-    new_values: payload,
-    created_at: new Date().toISOString(),
-  })
+  await db.from('audit_logs').insert({ actor_identity: admin.id, entity_type: 'platform_settings', entity_id: admin.id, action: 'UPDATED', new_values: payload, created_at: new Date().toISOString() })
 
   revalidatePath('/admin/settings')
   return {
