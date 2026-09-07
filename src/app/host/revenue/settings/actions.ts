@@ -20,30 +20,16 @@ export async function saveHostPayoutSettings(_previous: PayoutSettingsState, for
       bankName: String(formData.get('bankName') ?? ''),
       accountNumber: String(formData.get('accountNumber') ?? ''),
       ifscCode: String(formData.get('ifscCode') ?? ''),
-      autoPayout: formData.get('autoPayout') === 'on',
-      payoutDelayDays: Number(formData.get('payoutDelayDays') ?? 1),
+      autoPayout: true,
+      payoutDelayDays: 0,
     })
 
     revalidatePath('/host/revenue')
     revalidatePath('/host/revenue/settings')
 
-    if (settings.status === 'ACTIVE') {
-      return { ok: true, message: 'Bank account verified successfully. Payouts can use this account.' }
-    }
-
-    if (settings.status === 'UNDER_REVIEW') {
-      return { ok: true, message: 'Bank account submitted. RazorpayX is still validating the account.' }
-    }
-
-    if (settings.status === 'ACTION_REQUIRED') {
-      return {
-        ok: false,
-        message: settings.failureReason
-          ? `Bank account validation failed: ${settings.failureReason}`
-          : 'Bank account validation requires action. Check the account details and submit again.',
-      }
-    }
-
+    if (settings.status === 'ACTIVE') return { ok: true, message: 'Bank account verified successfully. Eligible earnings will be settled automatically on the 5th and 15th.' }
+    if (settings.status === 'UNDER_REVIEW') return { ok: true, message: 'Bank account submitted. RazorpayX is still validating the account.' }
+    if (settings.status === 'ACTION_REQUIRED') return { ok: false, message: settings.failureReason ? `Bank account validation failed: ${settings.failureReason}` : 'Bank account validation requires action. Check the account details and submit again.' }
     return { ok: true, message: 'Bank account details were saved and are awaiting validation.' }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Unable to save payout settings.' }
