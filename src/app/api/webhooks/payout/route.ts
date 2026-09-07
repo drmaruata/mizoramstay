@@ -20,14 +20,9 @@ type WebhookPayload = {
 }
 
 const statusMap: Record<string, string> = {
-  queued: 'PROCESSING',
-  pending: 'PROCESSING',
-  processing: 'PROCESSING',
-  processed: 'PAID',
-  failed: 'FAILED',
-  reversed: 'FAILED',
-  cancelled: 'CANCELLED',
-  rejected: 'FAILED',
+  queued: 'PROCESSING', pending: 'PROCESSING', processing: 'PROCESSING',
+  processed: 'PAID', failed: 'FAILED', reversed: 'FAILED',
+  cancelled: 'CANCELLED', rejected: 'FAILED',
 }
 
 export async function POST(request: Request) {
@@ -48,15 +43,9 @@ export async function POST(request: Request) {
   const payout = body.payload?.payout?.entity
   const db = createAdminClient()
   const provider = 'RAZORPAY_X'
-
   const { data: inserted, error: eventError } = await db.from('payout_events').insert({
-    provider,
-    event_id: eventId,
-    event_type: body.event ?? 'unknown',
-    payout_provider_id: payout?.id ?? null,
-    payload: body,
-    status: 'RECEIVED',
-    received_at: new Date().toISOString(),
+    provider, event_id: eventId, event_type: body.event ?? 'unknown',
+    payout_provider_id: payout?.id ?? null, payload: body, status: 'RECEIVED', received_at: new Date().toISOString(),
   }).select('id').maybeSingle()
 
   if (eventError?.code === '23505') return NextResponse.json({ ok: true, duplicate: true })
@@ -72,21 +61,61 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignored: true })
   }
 
-  const update = {
+  const now = new Date().toISOString()
+  const common = {
     status,
     provider,
     provider_transfer_id: payout.id,
     provider_transfer_status: payout.status ?? null,
     provider_utr: payout.utr ?? null,
     failure_reason: payout.status_details?.description ?? null,
-    settled_at: status === 'PAID' ? new Date().toISOString() : null,
-    paid_at: status === 'PAID' ? new Date().toISOString() : null,
-    updated_at: new Date().toISOString(),
+    settled_at: status === 'PAID' ? now : null,
+    paid_at: status === 'PAID' ? now : null,
+    updated_at: now,
   }
 
-  const { data: row, error: payoutError } = await db.from('host_payouts').update(update).eq('provider_transfer_id', payout.id).select('id,host_id,booking_id,status,net_amount').maybeSingle()
+  const { data: batch, error: batchLookupError } = await db
+    .from('host_settlement_batches')
+    .select('id,host_id,net_amount,status')
+    .eq('provider_transfer_id', payout.id)
+    .maybeSingle()
+
+  if (batchLookupError) {
+    await db.from('payout_events').update({ status: 'FAILED', error_message: batchLookupError.message, processed_at: now }).eq('id', inserted.id)
+    return NextResponse.json({ error: batchLookupError.message }, { status: 500 })
+  }
+
+  if (batch) {
+    const { error: updateBatchError } = await db.from('host_settlement_batches').update(common).eq('id', batch.id)
+    if (updateBatchError) {
+      await db.from('payout_events').update({ status: 'FAILED', error_message: updateBatchError.message, processed_at: now }).eq('id', inserted.id)
+      return NextResponse.json({ error: updateBatchError.message }, { status: 500 })
+    }
+
+    await db.from('host_payouts').update({
+      status,
+      paid_at: common.paid_at,
+      settled_at: common.settled_at,
+      updated_at: now,
+    }).eq('settlement_batch_id', batch.id)
+
+    const { data: host } = await db.from('host_profiles').select('user_id').eq('id', batch.host_id).maybeSingle()
+    if (host?.user_id) {
+      const subject = status === 'PAID' ? 'Settlement completed' : status === 'FAILED' ? 'Settlement needs attention' : `Settlement ${String(payout.status ?? '').replace(/_/g, ' ')}`
+      const message = status === 'PAID'
+        ? `Your MizoramStay settlement of ₹${Number(batch.net_amount ?? 0).toLocaleString('en-IN')} has been credited${payout.utr ? ` (UTR ${payout.utr}).` : '.'}`
+        : `Your MizoramStay settlement is now ${String(payout.status ?? '').replace(/_/g, ' ')}. ${payout.status_details?.description ?? ''}`.trim()
+      await db.from('notifications').insert({ user_id: host.user_id, type: 'PAYOUT', channel: 'IN_APP', subject, body: message, status: 'SENT', sent_at: now })
+    }
+
+    await db.from('payout_events').update({ status: 'PROCESSED', processed_at: now }).eq('id', inserted.id)
+    return NextResponse.json({ ok: true, event: body.event ?? null, settlement_batch_id: batch.id })
+  }
+
+  // Backward-compatible reconciliation for legacy per-booking payout records.
+  const { data: row, error: payoutError } = await db.from('host_payouts').update(common).eq('provider_transfer_id', payout.id).select('id,host_id,booking_id,status,net_amount').maybeSingle()
   if (payoutError) {
-    await db.from('payout_events').update({ status: 'FAILED', error_message: payoutError.message, processed_at: new Date().toISOString() }).eq('id', inserted.id)
+    await db.from('payout_events').update({ status: 'FAILED', error_message: payoutError.message, processed_at: now }).eq('id', inserted.id)
     return NextResponse.json({ error: payoutError.message }, { status: 500 })
   }
 
@@ -96,9 +125,9 @@ export async function POST(request: Request) {
       ? `Your MizoramStay payout of ₹${Number(row.net_amount).toLocaleString('en-IN')} has been processed${payout.utr ? ` (UTR ${payout.utr}).` : '.'}`
       : `Your MizoramStay payout is now ${String(payout.status ?? '').replace(/_/g, ' ')}. ${payout.status_details?.description ?? ''}`.trim()
     const { data: host } = await db.from('host_profiles').select('user_id').eq('id', row.host_id).maybeSingle()
-    if (host?.user_id) await db.from('notifications').insert({ user_id: host.user_id, type: 'PAYOUT', channel: 'IN_APP', subject, body: message, status: 'SENT', sent_at: new Date().toISOString() })
+    if (host?.user_id) await db.from('notifications').insert({ user_id: host.user_id, type: 'PAYOUT', channel: 'IN_APP', subject, body: message, status: 'SENT', sent_at: now })
   }
 
-  await db.from('payout_events').update({ status: 'PROCESSED', processed_at: new Date().toISOString() }).eq('id', inserted.id)
+  await db.from('payout_events').update({ status: 'PROCESSED', processed_at: now }).eq('id', inserted.id)
   return NextResponse.json({ ok: true, event: body.event ?? null })
 }
